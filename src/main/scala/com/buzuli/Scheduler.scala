@@ -1,51 +1,53 @@
 package com.buzuli
 
-import java.timer.TimerTask
-import java.util.Timer
+import java.time.{Duration, Instant}
+import java.util.concurrent.{ScheduledFuture, ScheduledThreadPoolExecutor, TimeUnit}
 
-class Scheduler {
-  type Task = () => Unit
+trait Scheduled {
+  def cancel(interrupt: Boolean = false): Unit
+}
 
-  def runAfter(delay: Duration)(task: Task): Scheduled = {
-
-  }
-
-  def repeatAtInterval(
-    interval: Duration,
-    stopOnError: Boolean = false,
-    runImmediately: Boolean = false
-  )
-
-  def repeatWithDelay(
-    interval: Duration,
-    stopOnError: Boolean = false,
-    runImmediately: Boolean = false
-  )
-
-  def runEvery(
-  )(task: Task): Schedule = {
-    val scheduled = new Schedule(interval, stopOnError)
-
-    if (runImmediately) {
-
-    }
-  }
-
-  class Schedule(
-    val interval: Interval
-  ) {
-    private var active: Boolean = false
-
-    protected def 
-    protected def scheduleNext
-
-    def inactive: Boolean = !active
-
-    def cancel(): Boolean = {
-      if (active) {
-        active = false
-      }
-    }
+object Scheduled {
+  def of[T](future: ScheduledFuture[T]): Scheduled = new Scheduled {
+    override def cancel(interrupt: Boolean = false): Unit = future.cancel(interrupt)
   }
 }
 
+class Scheduler {
+  val executor = new ScheduledThreadPoolExecutor(1)
+
+  def runnable(task: => Unit): Runnable = new Runnable {
+    def run(): Unit = task
+  }
+
+  def runAfter(delay: Duration)(task: => Unit): Scheduled = {
+    Scheduled.of(executor.schedule(runnable(task), delay.toNanos, TimeUnit.NANOSECONDS))
+  }
+
+  def runAt(ts: Instant)(task: => Unit): Scheduled = {
+    val now = Instant.now()
+    val delay = Duration.ofMillis(Math.max(0, ts.toEpochMilli - now.toEpochMilli))
+    runAfter(delay)(task)
+  }
+
+  def runEvery(
+    delay: Duration,
+    startImmediately: Boolean = false,
+    fixedInterval: Boolean = true
+  )(task: => Unit): Scheduled = Scheduled.of(
+    fixedInterval match {
+      case true => executor.scheduleAtFixedRate(
+        runnable(task),
+        if (startImmediately) 0 else delay.toNanos,
+        delay.toNanos,
+        TimeUnit.NANOSECONDS
+      )
+      case false => executor.scheduleWithFixedDelay(
+        runnable(task),
+        if (startImmediately) 0 else delay.toNanos,
+        delay.toNanos,
+        TimeUnit.NANOSECONDS
+      )
+    }
+  )
+}
