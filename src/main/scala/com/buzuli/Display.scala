@@ -122,9 +122,9 @@ class Display {
             .take(20)
             .zipWithIndex
             .foreach { case (char, col) =>
-            setCursor(row, col)
-            printIIC(char)
-          }
+              setCursor(row, col)
+              printIIC(char)
+            }
         }
     } match {
       case Failure(error) => println(s"Error updating clock: ${error}")
