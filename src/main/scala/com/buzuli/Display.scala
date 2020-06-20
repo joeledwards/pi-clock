@@ -118,7 +118,10 @@ class Display {
         .filter(_.isDefined)
         .map(_.get)
         .foreach { case (line, row) =>
-          line.zipWithIndex.foreach { case (char, col) =>
+          line
+            .take(20)
+            .zipWithIndex
+            .foreach { case (char, col) =>
             setCursor(row, col)
             printIIC(char)
           }
