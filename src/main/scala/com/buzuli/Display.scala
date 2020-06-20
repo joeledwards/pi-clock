@@ -1,7 +1,8 @@
 package com.buzuli
 
 import com.pi4j.wiringpi.I2C
-import scala.util.{Success, Try}
+
+import scala.util.{Failure, Success, Try}
 
 class Display {
   // commands
@@ -52,7 +53,7 @@ class Display {
 
   private var fd: Option[Int] = None
 
-  private val backlight: Int = LCD_BACKLIGHT
+  private var backlight: Int = LCD_BACKLIGHT
   private val displayFunction: Int = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS
   private var displayControl: Int = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF
   private var displayMode: Int = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT
@@ -97,16 +98,35 @@ class Display {
   }
 
   def shutdown(): Unit = fd foreach { fd =>
+    backlight = LCD_NOBACKLIGHT
+    setCursor(0,0)
+    printIIC(' ')
     clear()
     delay(100)
+    write(LCD_NOBACKLIGHT)
+    delay(1000)
     displayOff()
     delay(100)
   }
 
-  def update(text: List[Option[String]]): Unit = {
-    setCursor(0, 0)
-    printIIC('A')
-    // HOW DO I WRITE A CHARACTER?
+  def update(lines: List[Option[String]]): Unit = {
+    Try {
+      lines
+        .take(4)
+        .zipWithIndex
+        .map(x => x._1.map((_, x._2)))
+        .filter(_.isDefined)
+        .map(_.get)
+        .foreach { case (line, row) =>
+          line.zipWithIndex.foreach { case (char, col) =>
+            setCursor(row, col)
+            printIIC(char)
+          }
+        }
+    } match {
+      case Failure(error) => println(s"Error updating clock: ${error}")
+      case Success(_) =>
+    }
 
     // TODO: update the display
     // - track the prior display content
@@ -162,14 +182,14 @@ class Display {
     delay(2)
   }
 
-  def setCursor(column: Int, row: Int): Unit = {
-    val offset = column + row match {
+  def setCursor(row: Int, column: Int): Unit = {
+    val rowOffset = row match {
       case 0 => 0x00
       case 1 => 0x40
       case 2 => 0x14
       case 3 => 0x54
     }
-    command(LCD_SETDDRAMADDR | (column + offset))
+    command(LCD_SETDDRAMADDR | (column + rowOffset))
   }
 
   // Display function

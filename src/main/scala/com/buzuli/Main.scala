@@ -15,8 +15,8 @@ object Main extends App {
   }
 
   clock.onTick { timestamp =>
-    val lines = Some(timestamp.toString) ::
-      Nil
+    val iso = s"${timestamp.toString().slice(0, 19)}Z"
+    val lines: List[Option[String]] = Some(iso) :: None :: None :: None :: Nil
 
     if (Config.logOutput) {
       logLines(lines)
