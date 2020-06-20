@@ -72,19 +72,6 @@ class Display {
       case Some(_) => {
         println(s"Device ${Config.i2cAddress} accessible at fd ${fd}")
 
-        /*
-        I2C.wiringPiI2CWrite(fd, 0x03)
-        I2C.wiringPiI2CWrite(fd, 0x03)
-        I2C.wiringPiI2CWrite(fd, 0x03)
-        I2C.wiringPiI2CWrite(fd, 0x02)
-
-        I2C.wiringPiI2CWrite(fd, LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE)
-        I2C.wiringPiI2CWrite(fd, LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSOROFF | LCD_BACKLIGHT)
-        //I2C.wiringPiI2CWrite(fd, LCD_DISPLAYCONTROL | LCD_BACKLIGHT)
-        I2C.wiringPiI2CWrite(fd, LCD_CLEARDISPLAY)
-        I2C.wiringPiI2CWrite(fd, LCD_ENTRYMODESET | LCD_ENTRYLEFT)
-        */
-
         delay(50)
 
         write(backlight)
@@ -126,10 +113,6 @@ class Display {
     // - diff with the old with the new display content
     // - only write the differences
   }
-
-  /**
-   * C lib port
-   */
 
   // Helper functions
   def delay(millis: Long): Unit = Thread.sleep(millis)
@@ -218,51 +201,4 @@ class Display {
   // Dynamic controls
   def scrollLeft(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT)
   def scrollRight(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
-
-  /**
-   * Python lib port
-   */
-
-  def writeChar(row: Int, column: Int, character: Char): Unit = {
-    val offset = column + row match {
-      case 0 => 0
-      case 1 => 0x40
-      case 2 => 0x14
-      case 3 => 0x54
-    }
-    lcdPosition(offset)
-    lcdWrite(character, REGISTER_SELECT)
-  }
-
-  def lcdPosition(offset: Int): Unit = fd foreach { fd =>
-    I2C.wiringPiI2CWrite(fd, LCD_RETURNHOME)
-    I2C.wiringPiI2CWrite(fd, LCD_DISPLAYMOVE | offset)
-  }
-
-  def lcdStrobe(data: Int): Unit = fd foreach { fd =>
-    I2C.wiringPiI2CWrite(fd, data | ENABLE | LCD_BACKLIGHT)
-    Thread.sleep(1)
-    I2C.wiringPiI2CWrite(fd, (data & ~ENABLE) | LCD_BACKLIGHT)
-    Thread.sleep(1)
-  }
-
-  def lcdWriteFourBits(data: Int): Unit = fd foreach { fd =>
-    I2C.wiringPiI2CWrite(fd, data | LCD_BACKLIGHT)
-    lcdStrobe(data)
-  }
-
-  def lcdWrite(cmd: Int, mode: Int = 0): Unit = {
-    lcdWriteFourBits(mode | (cmd & 0xF0))
-    lcdWriteFourBits(mode | ((cmd << 4) & 0xF0))
-  }
-
-  def lcdWriteChar(character: Int, mode: Int = 1): Unit = {
-    lcdWriteFourBits(mode | (character & 0xF0))
-    lcdWriteFourBits(mode | ((character << 4) & 0xF0))
-  }
-
-  def lcdClear(): Unit = {
-    lcdWrite(LCD_CLEARDISPLAY)
-    lcdWrite(LCD_RETURNHOME)
-  }
 }
