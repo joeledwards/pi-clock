@@ -52,50 +52,176 @@ class Display {
 
   private var fd: Option[Int] = None
 
+  private val backlight: Int = LCD_BACKLIGHT
+  private val displayFunction: Int = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS
+  private var displayControl: Int = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF
+  private var displayMode: Int = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT
+
   def init(): Unit = {
     fd = Try {
       I2C.wiringPiI2CSetup(Config.i2cAddress)
     } match {
-      case Success(fd) if fd != -1 => {
+      case Success(fd) if fd != -1 => Some(fd)
+      case _ => None
+    }
+
+    fd match {
+      case None => {
+        println(s"Setup failed for address ${Config.i2cAddress}")
+      }
+      case Some(_) => {
         println(s"Device ${Config.i2cAddress} accessible at fd ${fd}")
 
+        /*
         I2C.wiringPiI2CWrite(fd, 0x03)
         I2C.wiringPiI2CWrite(fd, 0x03)
         I2C.wiringPiI2CWrite(fd, 0x03)
         I2C.wiringPiI2CWrite(fd, 0x02)
 
         I2C.wiringPiI2CWrite(fd, LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE)
-        I2C.wiringPiI2CWrite(fd, LCD_DISPLAYCONTROL | LCD_DISPLAYON)
+        I2C.wiringPiI2CWrite(fd, LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSOROFF | LCD_BACKLIGHT)
         //I2C.wiringPiI2CWrite(fd, LCD_DISPLAYCONTROL | LCD_BACKLIGHT)
         I2C.wiringPiI2CWrite(fd, LCD_CLEARDISPLAY)
         I2C.wiringPiI2CWrite(fd, LCD_ENTRYMODESET | LCD_ENTRYLEFT)
+        */
 
-        Thread.sleep(200)
+        delay(50)
 
-        Some(fd)
-      }
-      case _ => {
-        println(s"Setup failed for address ${Config.i2cAddress}")
-        None
+        write(backlight)
+        delay(1000)
+
+        write4Bits(0x03 << 4)
+        delay(5)
+        write4Bits(0x03 << 4)
+        delay(5)
+        write4Bits(0x03 << 4)
+        delay(1)
+        write4Bits(0x02 << 4)
+
+        function()
+        control()
+        clear()
+        mode()
+        home()
+
+        delay(200)
       }
     }
   }
 
   def shutdown(): Unit = fd foreach { fd =>
-    I2C.wiringPiI2CWrite(fd, LCD_CLEARDISPLAY)
-    I2C.wiringPiI2CWrite(fd, LCD_DISPLAYOFF)
+    clear()
+    delay(100)
+    displayOff()
+    delay(100)
   }
 
   def update(text: List[Option[String]]): Unit = {
-    fd foreach { fd =>
-      writeChar(0, 0, 'A') // A test
+    setCursor(0, 0)
+    printIIC('A')
+    // HOW DO I WRITE A CHARACTER?
 
-      // TODO: update the display
-      // - track the prior display content
-      // - diff with the old with the new display content
-      // - only write the differences
-    }
+    // TODO: update the display
+    // - track the prior display content
+    // - diff with the old with the new display content
+    // - only write the differences
   }
+
+  /**
+   * C lib port
+   */
+
+  // Helper functions
+  def delay(millis: Long): Unit = Thread.sleep(millis)
+
+  def write(data: Int): Unit = fd foreach {
+    I2C.wiringPiI2CWrite(_, data | backlight)
+  }
+
+  def pulseEnable(data: Int): Unit = {
+    // Ignoring the required delays since the JVM should be plenty slow...
+    write(data | ENABLE)
+    // delay >450ns
+    write(data & ~ENABLE)
+    // delay >450ns
+  }
+
+  def write4Bits(data: Int): Unit = {
+    write(data)
+    pulseEnable(data)
+  }
+
+  def command(cmd: Int): Unit = send(cmd, 0)
+
+  def registerChar(location: Int, charmap: Array[Int]): Unit = {
+    val location = 0x7
+    command(LCD_SETCGRAMADDR | (location << 3))
+
+    // TODO: write the custom char
+  }
+
+  def send(value: Int, mode: Int): Unit = {
+    val highNib = value & 0xf0
+    val lowNib = (value << 4) & 0xf0
+    write4Bits(highNib | mode)
+    write4Bits(lowNib | mode)
+  }
+
+  def printIIC(value: Int): Unit = send(value, REGISTER_SELECT)
+
+  def clear(): Unit = {
+    command(LCD_CLEARDISPLAY)
+    delay(2)
+  }
+
+  def home(): Unit = {
+    command(LCD_RETURNHOME)
+    delay(2)
+  }
+
+  def setCursor(column: Int, row: Int): Unit = {
+    val offset = column + row match {
+      case 0 => 0x00
+      case 1 => 0x40
+      case 2 => 0x14
+      case 3 => 0x54
+    }
+    command(LCD_SETDDRAMADDR | (column + offset))
+  }
+
+  // Display function
+  def function(): Unit = command(LCD_FUNCTIONSET | displayFunction)
+
+  // Display control
+  def control(): Unit = command(LCD_DISPLAYCONTROL | displayControl)
+  def control(pre: => Unit): Unit = { pre; control() }
+
+  def blinkOn(): Unit = control { displayControl |= LCD_BLINKON }
+  def blinkOff(): Unit = control { displayControl &= ~LCD_BLINKOFF }
+
+  def cursorOn(): Unit = control { displayControl |= LCD_CURSORON }
+  def cursorOff(): Unit = control { displayControl &= ~LCD_CURSOROFF }
+
+  def displayOn(): Unit = control { displayControl |= LCD_DISPLAYON }
+  def displayOff(): Unit = control { displayControl &= ~LCD_DISPLAYOFF }
+
+  // Display mode
+  def mode(): Unit = command(LCD_ENTRYMODESET | displayMode)
+  def mode(pre: => Unit): Unit = { pre; mode() }
+
+  def setLeftToRight(): Unit = mode { displayMode |= LCD_ENTRYLEFT }
+  def setRightToLeft(): Unit = mode { displayMode &= ~LCD_ENTRYLEFT }
+
+  def autoScrollOn(): Unit = mode { displayMode |= LCD_ENTRYSHIFTINCREMENT }
+  def autoScrollOff(): Unit = mode { displayMode &= ~LCD_ENTRYSHIFTINCREMENT }
+
+  // Dynamic controls
+  def scrollLeft(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT)
+  def scrollRight(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
+
+  /**
+   * Python lib port
+   */
 
   def writeChar(row: Int, column: Int, character: Char): Unit = {
     val offset = column + row match {
@@ -108,8 +234,9 @@ class Display {
     lcdWrite(character, REGISTER_SELECT)
   }
 
-  def lcdPosition(offset: Int): Unit = fd foreach {
-    I2C.wiringPiI2CWrite(_, LCD_DISPLAYMOVE | offset)
+  def lcdPosition(offset: Int): Unit = fd foreach { fd =>
+    I2C.wiringPiI2CWrite(fd, LCD_RETURNHOME)
+    I2C.wiringPiI2CWrite(fd, LCD_DISPLAYMOVE | offset)
   }
 
   def lcdStrobe(data: Int): Unit = fd foreach { fd =>
