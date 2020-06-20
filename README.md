@@ -18,3 +18,7 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_I@C_ADDRESS` : The device address of the display (decimal / hex)
 - `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text)
 - `PI_CLOCK_LOG_OUTPUT` : Should the device log time update events to stdout (toggle text)
+
+## Notes
+
+The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C.git)
