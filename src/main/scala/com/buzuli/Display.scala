@@ -53,6 +53,13 @@ class Display {
 
   private var fd: Option[Int] = None
 
+  private def generateDisplay(): Array[Array[Option[Char]]] = {
+    Array.fill[Array[Option[Char]]](4) {
+      Array.fill[Option[Char]](20)(None)
+    }
+  }
+  private var shadowDisplay = generateDisplay()
+
   private var backlight: Int = LCD_BACKLIGHT
   private val displayFunction: Int = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS
   private var displayControl: Int = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF
@@ -109,23 +116,47 @@ class Display {
     delay(100)
   }
 
+  case class LcdUpdate(row: Int, col: Int, char: Char)
+
+  def computeUpdates(lines: List[Option[String]]): List[LcdUpdate] = {
+    var updates: List[LcdUpdate] = Nil
+    val newDisplay = generateDisplay()
+
+    lines
+      .take(4)
+      .zipWithIndex
+      .map(x => x._1.map((_, x._2)))
+      .filter(_.isDefined)
+      .map(_.get)
+      .foreach { case (line, row) =>
+        line
+          .take(20)
+          .zipWithIndex
+          .foreach { case (char, col) =>
+            newDisplay(row)(col) = Some(char)
+          }
+      }
+
+    newDisplay.zipWithIndex.foreach { case (r, row) =>
+      r.zipWithIndex.foreach { case (cell, col) =>
+        if (cell != shadowDisplay(row)(col)) {
+          updates = LcdUpdate(row, col, cell.getOrElse(' ')) :: updates
+        }
+      }
+    }
+
+    shadowDisplay = newDisplay
+
+    updates
+  }
+
   def update(lines: List[Option[String]]): Unit = {
     Try {
-      lines
-        .take(4)
-        .zipWithIndex
-        .map(x => x._1.map((_, x._2)))
-        .filter(_.isDefined)
-        .map(_.get)
-        .foreach { case (line, row) =>
-          line
-            .take(20)
-            .zipWithIndex
-            .foreach { case (char, col) =>
-              setCursor(row, col)
-              printIIC(char)
-            }
-        }
+      computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
+        // println(s"(${row}, ${col}) => '${char}'")
+        setCursor(row, col)
+        printIIC(char)
+      }
     } match {
       case Failure(error) => println(s"Error updating clock: ${error}")
       case Success(_) =>
