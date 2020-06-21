@@ -6,6 +6,11 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 object Main extends App {
+  if (Config.checkIntegrity) {
+    println("Passed integrity check.")
+    sys.exit(0)
+  }
+
   val host: Koozie[String] = Koozie.sync(
     Some(InetAddress.getLocalHost.getHostName),
     Some(Duration(1, "minute"))
