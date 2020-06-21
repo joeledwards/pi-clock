@@ -77,8 +77,8 @@ class Display {
       case None => {
         println(s"Setup failed for address ${Config.i2cAddress}")
       }
-      case Some(_) => {
-        println(s"Device ${Config.i2cAddress} accessible at fd ${fd}")
+      case Some(descriptor) => {
+        println(s"Device ${Config.i2cAddress} accessible at fd ${descriptor}")
 
         delay(50)
 
@@ -161,11 +161,6 @@ class Display {
       case Failure(error) => println(s"Error updating clock: ${error}")
       case Success(_) =>
     }
-
-    // TODO: update the display
-    // - track the prior display content
-    // - diff with the old with the new display content
-    // - only write the differences
   }
 
   // Helper functions
