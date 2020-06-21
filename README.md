@@ -15,9 +15,10 @@ $ java -jar pi-clock-assembly-1.0.0.jar
 ## Configuration
 
 You can use environment variables to configure the application:
-- `PI_CLOCK_I@C_ADDRESS` : The device address of the display (decimal / hex)
+- `PI_CLOCK_I2C_ADDRESS` : The device address of the display (decimal / hex)
 - `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text)
 - `PI_CLOCK_LOG_OUTPUT` : Should the device log time update events to stdout (toggle text)
+- `PI_CLOCK_CHECK_INTEGRITY` : Exit with `0` status code (simple check for corruption)
 
 ## Notes
 
