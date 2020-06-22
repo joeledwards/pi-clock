@@ -1,6 +1,7 @@
 package com.buzuli
 
 import java.net.{Inet6Address, InetAddress, NetworkInterface}
+import java.time.ZoneId
 
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
@@ -59,9 +60,10 @@ object Main extends App {
   }
 
   clock.onTick { timestamp =>
-    val iso = s"${timestamp.toString().slice(0, 19)}Z"
-    val lines: List[Option[String]] = Some(iso) ::
-      None ::
+    val utc = s"${timestamp.toString.slice(0, 19)}Z"
+    val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 19)}L"
+    val lines: List[Option[String]] = Some(utc) ::
+      Some(local) ::
       Some(host.value.getOrElse("--")) ::
       Some(ip.value.getOrElse("--")) ::
       Nil
