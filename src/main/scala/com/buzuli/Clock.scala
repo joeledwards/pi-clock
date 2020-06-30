@@ -33,3 +33,7 @@ class Clock {
     listeners.foreach { _(Instant.now()) }
   }
 }
+
+object Clock {
+  def create(): Clock = new Clock
+}

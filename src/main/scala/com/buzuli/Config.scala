@@ -5,8 +5,13 @@ import scala.util.{Failure, Success, Try}
 object Config {
   lazy val checkIntegrity: Boolean = Env.getToggle("PI_CLOCK_CHECK_INTEGRITY").getOrElse(false)
   lazy val i2cAddress: Int = Env.getInt("PI_CLOCK_I2C_ADDRESS").getOrElse(0)
-  lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
   lazy val logOutput: Boolean = Env.getToggle("PI_CLOCK_LOG_OUTPUT").getOrElse(false)
+  lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
+  lazy val displayDimensions: DisplayDimensions = Env.getAs("PI_CLOCK_DISPLAY_DIMENSIONS") {
+    DisplayDimensions.of(_)
+  } getOrElse {
+    Display20x4
+  }
 }
 
 trait ConfigSupplier {

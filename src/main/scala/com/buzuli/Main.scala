@@ -1,10 +1,6 @@
 package com.buzuli
 
-import java.net.{Inet6Address, InetAddress, NetworkInterface}
 import java.time.ZoneId
-
-import scala.concurrent.duration.Duration
-import scala.jdk.CollectionConverters._
 
 object Main extends App {
   if (Config.checkIntegrity) {
@@ -12,42 +8,11 @@ object Main extends App {
     sys.exit(0)
   }
 
-  val host: Koozie[String] = Koozie.sync(
-    Some(InetAddress.getLocalHost.getHostName),
-    Some(Duration(1, "minute"))
-  )
-
-  val addresses: Koozie[List[String]] = Koozie.sync(
-    Some(NetworkInterface
-      .getNetworkInterfaces
-      .asScala
-      .toList
-      .filter(!_.isVirtual)
-      .filter(!_.isLoopback)
-      .filter(!_.getName.toLowerCase.contains("docker"))
-      .filter(!_.getName.toLowerCase.startsWith("tun"))
-      .filter(_.isUp)
-      .flatMap(_.getInetAddresses.asScala.toList)
-      .filter(!_.isAnyLocalAddress)
-      .filter(!_.isLoopbackAddress)
-      .filter(!_.isMulticastAddress)
-      .filter(!_.isInstanceOf[Inet6Address])
-      .map(_.getHostAddress)
-      .filter(!_.startsWith("127"))
-    ),
-    Some(Duration(1, "minute"))
-  )
-
-  val ip: Koozie[String] = Koozie.sync(
-    addresses.value.flatMap(_.collectFirst { case x => x }),
-    Some(Duration(1, "minute"))
-  )
-
   println(s"All Addresses:")
-  println(addresses.value.map(_.mkString("\n")).getOrElse(""))
+  println(SysInfo.addresses.value.map(_.mkString("\n")).getOrElse(""))
 
-  val clock = new Clock
-  val display = new Display
+  val clock = Clock.create()
+  val display = Display.create(Config.displayDimensions)
 
   sys.addShutdownHook {
     println("Shutting down ...")
@@ -60,13 +25,26 @@ object Main extends App {
   }
 
   clock.onTick { timestamp =>
-    val utc = s"${timestamp.toString.slice(0, 19)}Z"
-    val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 19)}L"
-    val lines: List[Option[String]] = Some(utc) ::
-      Some(local) ::
-      Some(host.value.getOrElse("--")) ::
-      Some(ip.value.getOrElse("--")) ::
-      Nil
+    val lines: List[Option[String]] = display.dimensions match {
+      case Display20x4 => {
+        val utc = s"${timestamp.toString.slice(0, 19)}Z"
+        val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 19)}L"
+
+        Some(utc) ::
+        Some(local) ::
+        Some(SysInfo.host.value.getOrElse("--")) ::
+        Some(SysInfo.ip.value.getOrElse("--")) ::
+        Nil
+      }
+      case Display16x2 => {
+        val utc = s"${timestamp.toString.slice(0, 16).replace('T', ' ')}"
+        val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 16).replace('T', ' ')}"
+
+        Some(utc) ::
+        Some(local) ::
+        Nil
+      }
+    }
 
     if (Config.logOutput) {
       logLines(lines)
@@ -82,12 +60,12 @@ object Main extends App {
   clock.start()
 
   def logLines(lines: List[Option[String]]): Unit = {
-    println("┌────────────────────┐")
+    println(s"┌${"─" * display.dimensions.columns}┐")
     lines
       .map(_.getOrElse(""))
-      .map(_.take(20))
-      .map(_.padTo(20, ' '))
+      .map(_.take(display.dimensions.columns))
+      .map(_.padTo(display.dimensions.columns, ' '))
       .foreach { line => println(s"│${line}│") }
-    println("└────────────────────┘")
+    println(s"└${"─" * display.dimensions.columns}┘")
   }
 }

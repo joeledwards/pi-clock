@@ -4,7 +4,7 @@ import com.pi4j.wiringpi.I2C
 
 import scala.util.{Failure, Success, Try}
 
-class Display {
+class Display(val dimensions: DisplayDimensions) {
   // commands
   val LCD_CLEARDISPLAY = 0x01
   val LCD_RETURNHOME = 0x02
@@ -54,8 +54,8 @@ class Display {
   private var fd: Option[Int] = None
 
   private def generateDisplay(): Array[Array[Option[Char]]] = {
-    Array.fill[Array[Option[Char]]](4) {
-      Array.fill[Option[Char]](20)(None)
+    Array.fill[Array[Option[Char]]](dimensions.rows) {
+      Array.fill[Option[Char]](dimensions.columns)(None)
     }
   }
   private var shadowDisplay = generateDisplay()
@@ -250,4 +250,22 @@ class Display {
   // Dynamic controls
   def scrollLeft(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT)
   def scrollRight(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
+}
+
+object Display {
+  def create(dimensions: DisplayDimensions): Display = new Display(dimensions)
+}
+
+sealed abstract class DisplayDimensions(val rows: Int, val columns: Int)
+case object Display20x4 extends DisplayDimensions(4, 20)
+case object Display16x2 extends DisplayDimensions(2, 16)
+
+object DisplayDimensions {
+  def of(dimensions: String): Option[DisplayDimensions] = dimensions match {
+    case "20x4" => Some(Display20x4)
+    case "4x20" => Some(Display20x4)
+    case "16x2" => Some(Display16x2)
+    case "2x16" => Some(Display16x2)
+    case _ => None
+  }
 }
