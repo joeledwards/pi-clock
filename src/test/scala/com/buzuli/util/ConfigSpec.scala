@@ -1,4 +1,4 @@
-package com.buzuli
+package com.buzuli.util
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

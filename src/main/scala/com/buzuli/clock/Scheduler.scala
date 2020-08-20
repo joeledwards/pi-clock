@@ -1,7 +1,9 @@
-package com.buzuli
+package com.buzuli.clock
 
-import java.time.{Duration, Instant}
+import java.time.Instant
 import java.util.concurrent.{ScheduledFuture, ScheduledThreadPoolExecutor, TimeUnit}
+
+import scala.concurrent.duration.Duration
 
 trait Scheduled {
   def cancel(interrupt: Boolean = false): Unit
@@ -26,7 +28,7 @@ class Scheduler {
 
   def runAt(ts: Instant)(task: => Unit): Scheduled = {
     val now = Instant.now()
-    val delay = Duration.ofMillis(Math.max(0, ts.toEpochMilli - now.toEpochMilli))
+    val delay = Duration(Math.max(0, ts.toEpochMilli - now.toEpochMilli), TimeUnit.MILLISECONDS)
     runAfter(delay)(task)
   }
 
@@ -50,4 +52,9 @@ class Scheduler {
       )
     }
   )
+}
+
+object Scheduler {
+  private lazy val defaultScheduler: Scheduler = new Scheduler
+  def default: Scheduler = defaultScheduler
 }

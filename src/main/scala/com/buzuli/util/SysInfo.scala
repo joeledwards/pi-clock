@@ -1,12 +1,11 @@
-package com.buzuli
+package com.buzuli.util
 
 import java.net.{Inet6Address, InetAddress, NetworkInterface}
 
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.io.Source
-import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
+import scala.jdk.CollectionConverters._
 
 object SysInfo {
   val host: Koozie[String] = Koozie.sync(

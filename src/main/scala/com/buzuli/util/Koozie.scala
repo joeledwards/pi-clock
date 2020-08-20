@@ -1,8 +1,7 @@
-package com.buzuli
+package com.buzuli.util
 
 import java.time.Instant
 
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 /**

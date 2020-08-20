@@ -20,6 +20,22 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-core
 libraryDependencies += "com.pi4j" % "pi4j-core" % "1.2"
 
+// https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
+libraryDependencies += "com.softwaremill.sttp.client" %% "core" % "2.2.4"
+
+// https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.8"
+
+// https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.6.8"
+
+// https://mvnrepository.com/artifact/com.typesafe.akka/akka-http
+libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
+
+// https://mvnrepository.com/artifact/com.typesafe.play/play-json
+libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.0"
+
+
 // Helpful when testing (recommended by scalatest)
 logBuffered in Test := false
 
@@ -54,6 +70,15 @@ def buildArtifactName(extension: String = ".jar") = {
 
 artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
   buildArtifactName(s".${artifact.extension}")
+}
+
+mainClass in assembly := Some("com.buzuli.clock.Main")
+
+assemblyMergeStrategy in assembly := {
+  case PathList(path, xs @ _*) if path.startsWith("jackson-") => MergeStrategy.last
+  case PathList("META-INF", "Main-Class", "com.buzuli.clock.Main") => MergeStrategy.first
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case _ => MergeStrategy.first
 }
 
 //assemblyJarName in assembly := {

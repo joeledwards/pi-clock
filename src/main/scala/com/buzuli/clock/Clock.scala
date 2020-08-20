@@ -1,7 +1,10 @@
-package com.buzuli
+package com.buzuli.clock
 
 import java.time.temporal.ChronoUnit
-import java.time.{Duration, Instant}
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
+import scala.concurrent.duration.Duration
 
 class Clock {
   type TickListener = (Instant) => Unit
@@ -13,7 +16,7 @@ class Clock {
   def start(): Unit = {
     if (!scheduled.isDefined) {
       scheduled = Some(scheduler.runAt(Instant.now.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS)) {
-        scheduled = Some(scheduler.runEvery(Duration.ofSeconds(1)) {
+        scheduled = Some(scheduler.runEvery(Duration(1, TimeUnit.SECONDS)) {
           notifyListeners()
         })
       })

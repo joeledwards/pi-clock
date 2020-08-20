@@ -1,4 +1,4 @@
-package com.buzuli
+package com.buzuli.clock
 
 import com.pi4j.wiringpi.I2C
 
