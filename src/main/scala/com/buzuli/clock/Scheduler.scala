@@ -57,4 +57,5 @@ class Scheduler {
 object Scheduler {
   private lazy val defaultScheduler: Scheduler = new Scheduler
   def default: Scheduler = defaultScheduler
+  def create(): Scheduler = new Scheduler
 }

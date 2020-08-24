@@ -26,13 +26,8 @@ object Main extends App {
     case (true, Some(pin)) => Some(Button.create(pin, Config.buttonNormallyClosed))
     case _ => None
   }
-  val checkInternet : Option[Scheduled] = Config.internetHealthCheck match {
-    case true => Some(Scheduler.default.runEvery(
-      Duration(1, TimeUnit.MINUTES),
-      fixedInterval = false
-    ) {
-      // TODO: check Internet and reset (via pin) when offline long enough
-    })
+  val checkInternet : Option[InternetHealth] = Config.internetHealthCheck match {
+    case true => Some(new InternetHealth)
     case false => None
   }
   val display = Display.create(Config.displayDimensions)
@@ -131,6 +126,7 @@ object Main extends App {
 
   clock.foreach(_.start())
   button.foreach(_.start())
+  checkInternet.foreach(_.start())
 
   def logLines(lines: List[Option[String]]): Unit = {
     println(s"┌${"─" * display.dimensions.columns}┐")
