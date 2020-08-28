@@ -30,6 +30,8 @@ object Config {
   lazy val healthSlackWebhook: Option[String] = Env.get("PI_CLOCK_HEALTH_SLACK_WEBHOOK")
   lazy val notificationSlackWebhook: Option[String] = Env.get("PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK")
 
+  lazy val senseHatInstalled: Boolean = Env.getToggle("PI_CLOCK_SENSE_HAT_INSTALLED").getOrElse(false)
+
   lazy val humanFriendly: Boolean = Env.getToggle("PI_CLOCK_HUMAN_FRIENDLY").getOrElse(false)
 
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)

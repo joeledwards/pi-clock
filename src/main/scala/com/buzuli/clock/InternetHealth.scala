@@ -3,7 +3,7 @@ package com.buzuli.clock
 import java.util.concurrent.TimeUnit
 
 import akka.dispatch.Futures
-import com.buzuli.util.{Http, HttpBodyJson}
+import com.buzuli.util.{Http, HttpBodyJson, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse}
 import play.api.libs.json.Json
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -88,12 +88,9 @@ class InternetHealth {
     Config.healthSlackWebhook match {
       case None => Future.successful(false)
       case Some(webhook) => Http.post(webhook, body = Some(HttpBodyJson(Json.obj(
-        "message" -> "health-check"
+        "text" -> "health-check"
       )))) andThen {
-        case Failure(error) => {
-          println(s"Error sending Slack message: ${error}")
-          error.printStackTrace()
-        }
+        handleRequestResult("slack")(_)
       } map { _ => true } recover { case _ => false }
     }
   }
@@ -101,30 +98,43 @@ class InternetHealth {
   private def checkIp(): Future[Boolean] = {
     val ipUrl = "http://ip-api.com/json"
     Http.get(ipUrl) andThen {
-      case Failure(error) => {
-        println(s"Error contacting IP service: ${error}")
-        error.printStackTrace()
-      }
+      handleRequestResult("ip-api")(_)
     } map { _ => true } recover { case _ => false }
   }
 
   private def checkNebula(): Future[Boolean] = {
     val nebulaUrl = "http://nebula:1337/health-check"
     Http.get(nebulaUrl) andThen {
-      case Failure(error) => {
-        println(s"Error contacting nebula: ${error}")
-        error.printStackTrace()
-      }
+      handleRequestResult("nebula")(_)
     } map { _ => true } recover { case _ => false }
   }
 
   private def checkHulk(): Future[Boolean] = {
     val hulkUrl = "http://hulk:1337/health-check"
     Http.get(hulkUrl) andThen {
-      case Failure(error) => {
-        println(s"Error contacting hulk: ${error}")
-        error.printStackTrace()
-      }
+      handleRequestResult("hulk")(_)
     } map { _ => true } recover { case _ => false }
+  }
+
+  def handleRequestResult(service: String)(result: Try[HttpResult]): Unit = result match {
+    case Failure(error) => {
+      println(s"Error contacting $service: $error")
+      error.printStackTrace()
+    }
+    case Success(HttpResultInvalidMethod(method)) => {
+      println(s"""Invalid method "$method" while checking service $service""")
+    }
+    case Success(HttpResultInvalidUrl(url)) => {
+      println(s"""Invalid URL "$url" while checking service $service""")
+    }
+    case Success(HttpResultInvalidHeader(name, value)) => {
+      println(s"""Invalid header "$name=$value" while checking service $service""")
+    }
+    case Success(HttpResultInvalidBody()) => {
+      println(s"""Invalid message body while checking service $service""")
+    }
+    case Success(HttpResultRawResponse(response)) => {
+      println(s"""Status ${response.status} from service $service""")
+    }
   }
 }

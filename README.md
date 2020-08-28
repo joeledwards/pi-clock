@@ -29,6 +29,7 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_INTERNET_RESET_PIN` : The GPIO pin to which the reset relay is connected
 - `PI_CLOCK_INTERNET_RESET_NC` : Is the reset relay normally-closed (default: `false`)
 - `PI_CLOCK_HEALTH_SLACK_WEBHOOK` : Slack webhook for health checks.
+- `PI_CLOCK_SENSE_HAT_INSTALLED` : Sense-hat system is installed (default: `false`)
 - `PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK` : Slack webhook for notifications.
 
 ## Notes
