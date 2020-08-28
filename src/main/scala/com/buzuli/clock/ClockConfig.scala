@@ -27,6 +27,9 @@ object Config {
   lazy val internetResetPin: Option[Int] = Env.getInt("PI_CLOCK_INTERNET_RESET_PIN")
   lazy val internetResetNc: Boolean = Env.getToggle("PI_CLOCK_INTERNET_RESET_NC").getOrElse(false)
 
+  lazy val healthSlackWebhook: Option[String] = Env.get("PI_CLOCK_HEALTH_SLACK_WEBHOOK")
+  lazy val notificationSlackWebhook: Option[String] = Env.get("PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK")
+
   lazy val humanFriendly: Boolean = Env.getToggle("PI_CLOCK_HUMAN_FRIENDLY").getOrElse(false)
 
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)

@@ -3,7 +3,7 @@ package com.buzuli.clock
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
-import com.buzuli.util.SysInfo
+import com.buzuli.util.{Http, SysInfo}
 
 import scala.concurrent.duration.Duration
 
@@ -43,8 +43,9 @@ object Main extends App {
     println("Shutting down ...")
     clock.foreach(_.stop())
     button.foreach(_.stop())
-    checkInternet.foreach(_.cancel(true))
+    checkInternet.foreach(_.shutdown())
     display.shutdown()
+    Http.shutdown()
   }
 
   if (Config.displayEnabled) {

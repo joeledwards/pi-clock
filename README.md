@@ -21,13 +21,15 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_LOG_OUTPUT` : Should the device log time update events to stdout (toggle text)
 - `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text)
 - `PI_CLOCK_DISPLAY_DIMENSIONS` : The dimensions of the display (20x4 or 16x2)
+- `PI_CLOCK_HUMAN_FRIENDLY` : Should the display be human friendly; standard is ISO-8601 timestamps (default: `false`)
 - `PI_CLOCK_BUTTON_ENABLED` : Should the control button be enabled (default: `false`)
 - `PI_CLOCK_BUTTON_PIN` : The pin associated with the control button (cycles display mode)
 - `PI_CLOCK_BUTTON_NC` : Is the button normally-closed (default: `false`)
 - `PI_CLOCK_INTERNET_HEALTH_CHECK` : Should the device perform regular Internet health checks (default: `false`)
 - `PI_CLOCK_INTERNET_RESET_PIN` : The GPIO pin to which the reset relay is connected
 - `PI_CLOCK_INTERNET_RESET_NC` : Is the reset relay normally-closed (default: `false`)
-- `PI_CLOCK_HUMAN_FRIENDLY` : Should the display be human friendly; standard is ISO-8601 timestamps (default: `false`)
+- `PI_CLOCK_HEALTH_SLACK_WEBHOOK` : Slack webhook for health checks.
+- `PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK` : Slack webhook for notifications.
 
 ## Notes
 

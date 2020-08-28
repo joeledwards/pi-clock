@@ -12,9 +12,9 @@ import play.api.libs.json._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-sealed trait Validity[T]
-case class Valid[T](value: T) extends Validity[T]
-case class Invalid[T](message: String, input: T) extends Validity[T]
+sealed trait Validity[I, O]
+case class Valid[I, O](value: O) extends Validity[I, O]
+case class Invalid[I, O](message: String, input: I) extends Validity[I, O]
 
 sealed trait HttpBody {
   def contentType: ContentType
@@ -46,11 +46,13 @@ object Http {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   object method {
-    def apply(method: String): Validity[HttpMethod] = validateMethod(method)
+    def apply(method: String): Validity[String, HttpMethod] = validateMethod(method)
   }
 
   object header {
-    def apply(name: String, value: String): Validity[HttpHeader] = validateHeader((name, value))
+    def apply(name: String, value: String): Validity[(String, String), HttpHeader] = {
+      validateHeader((name, value))
+    }
   }
 
   object body {
@@ -76,7 +78,7 @@ object Http {
         HttpResultInvalidMethod(method)
       )
       case (_, Invalid(_, inv :: _ :: Nil)) => Future.successful(
-        HttpResultInvalidHeader(inv.name, inv.value)
+        HttpResultInvalidHeader(inv._1, inv._2)
       )
       case (Valid(mth), Valid(hdrs)) => rq(HttpRequest(
         method = mth,
@@ -114,7 +116,7 @@ object Http {
     body = body
   )
 
-  private def validateMethod(method: String): Validity[HttpMethod] = method.toUpperCase match {
+  private def validateMethod(method: String): Validity[String, HttpMethod] = method.toUpperCase match {
     case "connect" => Valid(HttpMethods.CONNECT)
     case "delete" => Valid(HttpMethods.DELETE)
     case "get" => Valid(HttpMethods.GET)
@@ -124,12 +126,12 @@ object Http {
     case "put" => Valid(HttpMethods.PUT)
     case "post" => Valid(HttpMethods.POST)
     case "trace" => Valid(HttpMethods.TRACE)
-    case um => Invalid(s"Unsupported HTTP method \"$um\"", method)
+    case um => Invalid(s"""Unsupported HTTP method "$um"""", method)
   }
 
   private def validateHeaders(
     headers: List[(String, String)]
-  ): Validity[List[HttpHeader]] = {
+  ): Validity[List[(String, String)], List[HttpHeader]] = {
     val (invalids, valids) = headers map {
       validateHeader(_)
     } partition {
@@ -138,14 +140,14 @@ object Http {
     }
 
     invalids.length match {
-      case 0 => Valid(valids)
+      case 0 => Valid(valids map { case Valid(header) => header })
       case n => Invalid(s"Found ${n} invalid headers.", headers)
     }
   }
 
   private def validateHeader(
     header: (String, String)
-  ): Validity[HttpHeader] = HttpHeader.parse(header._1, header._2) match {
+  ): Validity[(String, String), HttpHeader] = HttpHeader.parse(header._1, header._2) match {
     case Ok(header, errors) => Valid(header)
     case Error(error) => Invalid(error.detail, header)
   }
