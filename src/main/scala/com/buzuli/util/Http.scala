@@ -117,15 +117,15 @@ object Http {
   )
 
   private def validateMethod(method: String): Validity[String, HttpMethod] = method.toUpperCase match {
-    case "connect" => Valid(HttpMethods.CONNECT)
-    case "delete" => Valid(HttpMethods.DELETE)
-    case "get" => Valid(HttpMethods.GET)
-    case "head" => Valid(HttpMethods.HEAD)
-    case "options" => Valid(HttpMethods.OPTIONS)
-    case "patch" => Valid(HttpMethods.PATCH)
-    case "put" => Valid(HttpMethods.PUT)
-    case "post" => Valid(HttpMethods.POST)
-    case "trace" => Valid(HttpMethods.TRACE)
+    case "CONNECT" => Valid(HttpMethods.CONNECT)
+    case "DELETE" => Valid(HttpMethods.DELETE)
+    case "GET" => Valid(HttpMethods.GET)
+    case "HEAD" => Valid(HttpMethods.HEAD)
+    case "OPTIONS" => Valid(HttpMethods.OPTIONS)
+    case "PATCH" => Valid(HttpMethods.PATCH)
+    case "PUT" => Valid(HttpMethods.PUT)
+    case "POST" => Valid(HttpMethods.POST)
+    case "TRACE" => Valid(HttpMethods.TRACE)
     case um => Invalid(s"""Unsupported HTTP method "$um"""", method)
   }
 

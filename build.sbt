@@ -78,6 +78,7 @@ assemblyMergeStrategy in assembly := {
   case PathList(path, xs @ _*) if path.startsWith("jackson-") => MergeStrategy.last
   case PathList("META-INF", "Main-Class", "com.buzuli.clock.Main") => MergeStrategy.first
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case PathList("reference.conf") => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
 
