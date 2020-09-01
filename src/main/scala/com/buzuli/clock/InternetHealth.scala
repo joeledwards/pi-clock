@@ -56,7 +56,7 @@ class InternetHealth {
     // Check access to two Internet services
     val outcomes: List[Future[Boolean]] = checkSlack() ::
       checkIp() ::
-      checkHulk() ::
+      checkVision() ::
       checkNebula() ::
       Nil
 
@@ -109,10 +109,10 @@ class InternetHealth {
     } map { _ => true } recover { case _ => false }
   }
 
-  private def checkHulk(): Future[Boolean] = {
-    val hulkUrl = "http://hulk:1337/health-check"
-    Http.get(hulkUrl) andThen {
-      handleRequestResult("hulk")(_)
+  private def checkVision(): Future[Boolean] = {
+    val visionUrl = "http://vision:1337/health-check"
+    Http.get(visionUrl) andThen {
+      handleRequestResult("vision")(_)
     } map { _ => true } recover { case _ => false }
   }
 
