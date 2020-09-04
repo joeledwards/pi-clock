@@ -96,7 +96,7 @@ class InternetHealth {
     ) map {
       _.map {
         case Success(Left(service)) => Some(service)
-        case Success(true) => None
+        case Success(Right(_)) => None
         case _ => Some("unknown")
       }
     } map { _ match {
