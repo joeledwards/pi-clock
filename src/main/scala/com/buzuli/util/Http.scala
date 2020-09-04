@@ -31,13 +31,18 @@ case class HttpBodyJson(body: JsValue) extends HttpBody {
 
 sealed trait HttpResult {
   def response: Option[HttpResponse] = None
+  def body: Option[HttpBody] = None
 }
 case class HttpResultInvalidMethod(input: String) extends HttpResult
 case class HttpResultInvalidUrl(url: String) extends HttpResult
 case class HttpResultInvalidHeader(name: String, value: String) extends HttpResult
 case class HttpResultInvalidBody() extends HttpResult
-case class HttpResultRawResponse(rawResponse: HttpResponse) extends HttpResult {
+case class HttpResultRawResponse(
+    rawResponse: HttpResponse,
+    data: Option[HttpBody] = None
+) extends HttpResult {
   override def response: Option[HttpResponse] = Some(rawResponse)
+  override def body: Option[HttpBody] = data
 }
 
 object Http {
@@ -63,12 +68,20 @@ object Http {
 
   def http = AkkaHttp()
 
-  def rq(request: HttpRequest): Future[HttpResponse] = http.singleRequest(request)
+  def makeRequest(
+    request: HttpRequest,
+    timeout: Option[Duration] = Some(Duration(15, TimeUnit.SECONDS))
+  ): Future[HttpResponse] = {
+    // TODO: figure out how to enforce client connection timeouts
+    http.singleRequest(request)
+  }
   def rq(
     method: String,
     url: String,
     headers: List[(String, String)] = Nil,
-    body: Option[HttpBody] = None
+    body: Option[HttpBody] = None,
+    collect: Boolean = false,
+    timeout: Option[Duration] = None
   ): Future[HttpResult] = {
     (
       validateMethod(method),
@@ -80,40 +93,64 @@ object Http {
       case (_, Invalid(_, inv :: _ :: Nil)) => Future.successful(
         HttpResultInvalidHeader(inv._1, inv._2)
       )
-      case (Valid(mth), Valid(hdrs)) => rq(HttpRequest(
-        method = mth,
-        uri = url,
-        headers = hdrs,
-        entity = body match {
-          case None => HttpEntity.Empty
-          case Some(HttpBodyBytes(bytes)) => HttpEntity(bytes)
-          case Some(HttpBodyText(text)) => HttpEntity(text)
-          case Some(HttpBodyJson(json)) => HttpEntity(ContentTypes.`application/json`, json.toString.getBytes)
+      case (Valid(mth), Valid(hdrs)) => makeRequest(
+        HttpRequest(
+          method = mth,
+          uri = url,
+          headers = hdrs,
+          entity = body match {
+            case None => HttpEntity.Empty
+            case Some(HttpBodyBytes(bytes)) => HttpEntity(bytes)
+            case Some(HttpBodyText(text)) => HttpEntity(text)
+            case Some(HttpBodyJson(json)) => HttpEntity(ContentTypes.`application/json`, json.toString.getBytes)
+          }
+        ),
+        timeout = timeout
+      ) flatMap { response =>
+        collect match {
+          case false => {
+            response.entity.discardBytes()
+            Future.successful(HttpResultRawResponse(response))
+          }
+          case true => {
+            response.entity.toStrict(Duration(5, TimeUnit.SECONDS)).collect { case r =>
+              r.getData().asByteBuffer.array()
+            } map { bytes =>
+              val data: HttpBody = response.entity.getContentType() match {
+                case ContentTypes.`application/json` => HttpBodyJson(Json.parse(bytes))
+                case ContentTypes.`text/plain(UTF-8)` => HttpBodyText(bytes.toString)
+                case _ => HttpBodyBytes(bytes)
+              }
+              HttpResultRawResponse(response, Some(data))
+            }
+          }
         }
-      )) map {
-        HttpResultRawResponse(_)
       }
     }
   }
 
   def get(
     url: String,
-    headers: List[(String, String)] = Nil
+    headers: List[(String, String)] = Nil,
+    timeout: Option[Duration] = None
   ): Future[HttpResult] = rq(
     "GET",
     url,
-    headers = headers
+    headers = headers,
+    timeout = timeout
   )
 
   def post(
     url: String,
     headers: List[(String, String)] = Nil,
-    body: Option[HttpBody] = None
+    body: Option[HttpBody] = None,
+    timeout: Option[Duration] = None
   ): Future[HttpResult] = rq(
     "POST",
     url,
     headers = headers,
-    body = body
+    body = body,
+    timeout = timeout
   )
 
   private def validateMethod(method: String): Validity[String, HttpMethod] = method.toUpperCase match {
@@ -159,7 +196,7 @@ object TryHttp extends App {
   val result = Await.result(Http.get("http://rocket:1337/"), Duration(5, TimeUnit.SECONDS))
 
   result match {
-    case HttpResultRawResponse(response) => {
+    case HttpResultRawResponse(response, None) => {
       val json = Json.obj(
         "status" -> response.status.intValue,
         "headers" -> Json.arr(response.headers.map(h =>

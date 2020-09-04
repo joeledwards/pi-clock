@@ -1,10 +1,9 @@
 package com.buzuli.clock
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import akka.dispatch.Futures
-import com.buzuli.util.{Http, HttpBodyJson, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse}
-import play.api.libs.json.Json
+import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -12,14 +11,16 @@ import scala.util.{Failure, Success, Try}
 
 sealed trait Outage
 case object InternetOutage extends Outage
-case object InternetServiceOutage extends Outage
+case class InternetServiceOutage(service: String) extends Outage
 case object LocalNetworkOutage extends Outage
-case object LocalServiceOutage extends Outage
+case class LocalServiceOutage(service: String) extends Outage
 
 class InternetHealth {
   private implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val scheduler: Scheduler = Scheduler.create()
   private var scheduled: Option[Scheduled] = None
+
+  private var offlineSince: Option[Instant] = None
 
   def start(): Unit = {
     if (scheduled.isEmpty) {
@@ -31,14 +32,40 @@ class InternetHealth {
       ) { Try {
         Await.result(checkHealth(), Duration(45, TimeUnit.SECONDS))
       } match {
-        case Success(None) => println("Internet and network healthy.")
-        case Success(Some(InternetOutage)) => println("No Internet connectivity.")
-        case Success(Some(InternetServiceOutage)) => println("An Internet service is unavailable.")
-        case Success(Some(LocalNetworkOutage)) => println("No local network connectivity.")
-        case Success(Some(LocalServiceOutage)) => println("A local service is unavailable")
         case Failure(error) => {
           println(s"Error in the Internet health-check system: ${error}")
           error.printStackTrace()
+        }
+        case Success(Some(LocalNetworkOutage)) => println("No local network connectivity.")
+        case Success(Some(InternetOutage)) => {
+          offlineSince = offlineSince match {
+            case Some(whence) => {
+              println(s"No Internet connectivity since ${whence}.")
+              Some(whence)
+            }
+            case None => {
+              println(s"Internet connectivity lost.")
+              Some(Instant.now)
+            }
+          }
+        }
+        case Success(otherOutage) => {
+          offlineSince match {
+            case None =>
+            case Some(whence) => {
+              val elapsed = Duration.fromNanos(
+                java.time.Duration.between(whence, Instant.now).toNanos
+              )
+              println(s"Internet connectivity restored after ${elapsed}.")
+              Notify.slack(s"Internet connectivity restored after ${elapsed}")
+              offlineSince = None
+            }
+          }
+          otherOutage match {
+            case None => println("Internet and local network are healthy.")
+            case Some(LocalServiceOutage(service)) => println(s"Local service '${service}' is unavailable")
+            case Some(InternetServiceOutage(service)) => println(s"Internet service '${service}' is unavailable.")
+          }
         }
       } })
     }
@@ -54,7 +81,7 @@ class InternetHealth {
   private def checkHealth(): Future[Option[Outage]] = {
     // Check access to two local servers
     // Check access to two Internet services
-    val outcomes: List[Future[Boolean]] = checkSlack() ::
+    val outcomes: List[Future[Either[String, String]]] = checkHttpbin() ::
       checkIp() ::
       checkVision() ::
       checkNebula() ::
@@ -68,52 +95,40 @@ class InternetHealth {
       )
     ) map {
       _.map {
-        case Success(true) => true
-        case _ => false
+        case Success(Left(service)) => Some(service)
+        case Success(true) => None
+        case _ => Some("unknown")
       }
     } map { _ match {
-      case _ :: _ :: false :: false :: Nil => Some(LocalNetworkOutage)
-      case false :: false :: _ :: _ :: Nil => Some(InternetOutage)
-      case _ :: _ :: false :: true :: Nil => Some(LocalServiceOutage)
-      case _ :: _ :: true :: false :: Nil => Some(LocalServiceOutage)
-      case false :: true :: _ :: _ :: Nil => Some(InternetServiceOutage)
-      case true :: false :: _ :: _ :: Nil => Some(InternetServiceOutage)
+      case _ :: _ :: Some(_) :: Some(_) :: Nil => Some(LocalNetworkOutage)
+      case Some(_) :: Some(_) :: _ :: _ :: Nil => Some(InternetOutage)
+      case _ :: _ :: Some(service) :: None :: Nil => Some(LocalServiceOutage(service))
+      case _ :: _ :: None :: Some(service) :: Nil => Some(LocalServiceOutage(service))
+      case Some(service) :: None :: _ :: _ :: Nil => Some(InternetServiceOutage(service))
+      case None :: Some(service) :: _ :: _ :: Nil => Some(InternetServiceOutage(service))
       case _ => None
     } }
 
     result
   }
 
-  private def checkSlack(): Future[Boolean] = {
-    Config.healthSlackWebhook match {
-      case None => Future.successful(false)
-      case Some(webhook) => Http.post(webhook, body = Some(HttpBodyJson(Json.obj(
-        "text" -> "health-check"
-      )))) andThen {
-        handleRequestResult("slack")(_)
-      } map { _ => true } recover { case _ => false }
-    }
+  private def checkHttpbin() = {
+    checkService("httpbin", "http://httpbin.org/")
+  }
+  private def checkIp() = {
+    checkService("ip-api", "http://ip-api.com/json")
+  }
+  private def checkNebula() = {
+    checkService("nebula", "http://nebula:1337/health-check")
+  }
+  private def checkVision() = {
+    checkService("vision", "http://vision:1337/health-check")
   }
 
-  private def checkIp(): Future[Boolean] = {
-    val ipUrl = "http://ip-api.com/json"
-    Http.get(ipUrl) andThen {
-      handleRequestResult("ip-api")(_)
-    } map { _ => true } recover { case _ => false }
-  }
-
-  private def checkNebula(): Future[Boolean] = {
-    val nebulaUrl = "http://nebula:1337/health-check"
-    Http.get(nebulaUrl) andThen {
-      handleRequestResult("nebula")(_)
-    } map { _ => true } recover { case _ => false }
-  }
-
-  private def checkVision(): Future[Boolean] = {
-    val visionUrl = "http://vision:1337/health-check"
-    Http.get(visionUrl) andThen {
-      handleRequestResult("vision")(_)
-    } map { _ => true } recover { case _ => false }
+  private def checkService(service: String, url: String): Future[Either[String, String]] = {
+    Http.get(url) andThen {
+      handleRequestResult(service)(_)
+    } map { _ => Right(service) } recover { case _ => Left(service) }
   }
 
   def handleRequestResult(service: String)(result: Try[HttpResult]): Unit = result match {
@@ -133,7 +148,7 @@ class InternetHealth {
     case Success(HttpResultInvalidBody()) => {
       println(s"""Invalid message body while checking service $service""")
     }
-    case Success(HttpResultRawResponse(response)) => {
+    case Success(HttpResultRawResponse(response, None)) => {
       println(s"""Status ${response.status} from service $service""")
     }
   }
