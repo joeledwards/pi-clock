@@ -1,9 +1,12 @@
 package com.buzuli.clock
 
 import java.time.Instant
+import java.time.temporal.{ChronoUnit, TemporalAmount, TemporalUnit}
 import java.util.concurrent.TimeUnit
 
-import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse}
+import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Types}
+import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
+import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -21,6 +24,42 @@ class InternetHealth {
   private var scheduled: Option[Scheduled] = None
 
   private var offlineSince: Option[Instant] = None
+  private val gpio: Option[RaspiGpioProvider] = Some(
+    new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING)
+  )
+  private val gpioPin: Option[Pin] = Config.internetResetPin map { pinAddress =>
+    val pin: Pin = RaspiPin.getPinByAddress(pinAddress)
+    gpio.foreach { g =>
+      powerOn()
+      g.`export`(pin, PinMode.DIGITAL_OUTPUT)
+    }
+    pin
+  }
+
+  def setHigh(): Unit = gpioPin foreach { pin =>
+    gpio.foreach { _.setState(pin, PinState.HIGH) }
+  }
+  def setLow(): Unit = gpioPin foreach { pin =>
+    gpio.foreach { _.setState(pin, PinState.LOW) }
+  }
+
+  def powerOn(): Unit = Config.internetResetNc match {
+    case true => setLow()
+    case false => setHigh()
+  }
+  def powerOff(): Unit = Config.internetResetNc match {
+    case true => setHigh()
+    case false => setLow()
+  }
+
+  def resetInternet(): Unit = {
+    gpioPin.foreach { _ => println("Resetting the Internet connection ...") }
+
+    powerOff()
+    Async.delay(1000) andThen { case _ =>
+      powerOn()
+    }
+  }
 
   def start(): Unit = {
     if (scheduled.isEmpty) {
@@ -41,6 +80,9 @@ class InternetHealth {
           offlineSince = offlineSince match {
             case Some(whence) => {
               println(s"No Internet connectivity since ${whence}.")
+              if (Instant.now.minus(5, ChronoUnit.MINUTES).isAfter(whence)) {
+                resetInternet()
+              }
               Some(whence)
             }
             case None => {

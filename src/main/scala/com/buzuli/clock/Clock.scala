@@ -4,6 +4,8 @@ import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+import com.buzuli.util.{Scheduled, Scheduler}
+
 import scala.concurrent.duration.Duration
 
 class Clock {

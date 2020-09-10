@@ -1,4 +1,4 @@
-package com.buzuli.clock
+package com.buzuli.util
 
 import java.time.Instant
 import java.util.concurrent.{ScheduledFuture, ScheduledThreadPoolExecutor, TimeUnit}

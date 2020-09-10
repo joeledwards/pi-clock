@@ -2,9 +2,13 @@ package com.buzuli.clock
 
 import com.pi4j.wiringpi.I2C
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext
 
 class Display(val dimensions: DisplayDimensions) {
+  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+
   // commands
   val LCD_CLEARDISPLAY = 0x01
   val LCD_RETURNHOME = 0x02
@@ -150,7 +154,7 @@ class Display(val dimensions: DisplayDimensions) {
     updates
   }
 
-  def update(lines: List[Option[String]]): Unit = {
+  def update(lines: List[Option[String]]): Unit = Future {
     Try {
       computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
         // println(s"(${row}, ${col}) => '${char}'")
