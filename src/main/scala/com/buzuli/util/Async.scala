@@ -14,8 +14,8 @@ object Async {
     Scheduler.default.runAfter(duration) {
       val end = Instant.now
       val duration = Duration(
-        java.time.Duration.between(start, end).toNanos,
-        TimeUnit.NANOSECONDS
+        java.time.Duration.between(start, end).toMillis,
+        TimeUnit.MILLISECONDS
       )
       p.success(duration)
     }

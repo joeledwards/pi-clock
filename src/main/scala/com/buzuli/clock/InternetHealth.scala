@@ -4,7 +4,7 @@ import java.time.Instant
 import java.time.temporal.{ChronoUnit, TemporalAmount, TemporalUnit}
 import java.util.concurrent.TimeUnit
 
-import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Types}
+import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time, Types}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
 import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
 
@@ -24,6 +24,7 @@ class InternetHealth {
   private var scheduled: Option[Scheduled] = None
 
   private var offlineSince: Option[Instant] = None
+  private var lastReset: Option[Instant] = None
   private val gpio: Option[RaspiGpioProvider] = Some(
     new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING)
   )
@@ -54,7 +55,7 @@ class InternetHealth {
 
   def resetInternet(): Unit = {
     gpioPin.foreach { _ => println("Resetting the Internet connection ...") }
-
+    lastReset = Some(Time.now)
     powerOff()
     Async.delay(1000) andThen { case _ =>
       powerOn()
@@ -80,7 +81,15 @@ class InternetHealth {
           offlineSince = offlineSince match {
             case Some(whence) => {
               println(s"No Internet connectivity since ${whence}.")
-              if (Instant.now.minus(5, ChronoUnit.MINUTES).isAfter(whence)) {
+              val sufficientOfflineDuration = Time.since(whence).gteq(Duration(5, TimeUnit.MINUTES))
+              val sufficientResetDelay = lastReset match {
+                case None => true
+                case Some(whence) if Time.since(whence).gteq(Duration(5, TimeUnit.MINUTES)) => true
+                case _ => false
+              }
+              if (sufficientOfflineDuration && sufficientResetDelay) {
+                // Only rest if we have been offline for 5 minutes and
+                // we haven't attempted a reset in the last 5 minutes.
                 resetInternet()
               }
               Some(whence)
