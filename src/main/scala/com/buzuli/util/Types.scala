@@ -12,7 +12,7 @@ object Types {
         case _ => None
       }
     }
-    def fromJava[T](opt: Optional[T]): Option[T] = opt.map(v => Some(v)).orElse(None).get
+    def fromJava[T](opt: Optional[T]): Option[T] = opt.map[Option[T]](v => Some(v)).orElse(None)
     def toJava[T](opt: Option[T]): Optional[T] = opt match {
       case None => Optional.empty()
       case Some(v) => Optional.of(v)

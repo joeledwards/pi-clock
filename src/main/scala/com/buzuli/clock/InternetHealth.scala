@@ -1,12 +1,10 @@
 package com.buzuli.clock
 
 import java.time.Instant
-import java.time.temporal.{ChronoUnit, TemporalAmount, TemporalUnit}
 import java.util.concurrent.TimeUnit
 
-import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time, Types}
+import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
-import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -25,7 +23,7 @@ class InternetHealth {
 
   private var offlineSince: Option[Instant] = None
   private var lastReset: Option[Instant] = None
-  private val gpio: Option[RaspiGpioProvider] = Some(
+  private lazy val gpio: Option[RaspiGpioProvider] = Some(
     new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING)
   )
   private val gpioPin: Option[Pin] = Config.internetResetPin map { pinAddress =>
@@ -67,7 +65,7 @@ class InternetHealth {
       println("Scheduling regular Internet health checks ...")
 
       scheduled = Some(scheduler.runEvery(
-        Duration(1, TimeUnit.MINUTES),
+        Config.internetCheckInterval,
         startImmediately = true
       ) { Try {
         Await.result(checkHealth(), Duration(45, TimeUnit.SECONDS))
@@ -84,7 +82,7 @@ class InternetHealth {
               val sufficientOfflineDuration = Time.since(whence).gteq(Duration(5, TimeUnit.MINUTES))
               val sufficientResetDelay = lastReset match {
                 case None => true
-                case Some(whence) if Time.since(whence).gteq(Duration(5, TimeUnit.MINUTES)) => true
+                case Some(whence) if Time.since(whence).gteq(Config.internetOutageDuration) => true
                 case _ => false
               }
               if (sufficientOfflineDuration && sufficientResetDelay) {
