@@ -197,8 +197,12 @@ class InternetHealth {
     case Success(HttpResultInvalidBody()) => {
       println(s"""Invalid message body while checking service $service""")
     }
-    case Success(HttpResultRawResponse(response, None)) => {
-      println(s"""Status ${response.status} from service $service""")
+    case Success(HttpResultRawResponse(response, _, duration)) => {
+      val durationString = duration match {
+        case Some(duration) => s" (took ${Time.prettyDuration(duration)})"
+        case None => ""
+      }
+      println(s"""Status ${response.status} from service ${service}${durationString}""")
     }
   }
 }

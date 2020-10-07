@@ -1,5 +1,6 @@
 package com.buzuli.util
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
@@ -32,6 +33,7 @@ case class HttpBodyJson(body: JsValue) extends HttpBody {
 sealed trait HttpResult {
   def response: Option[HttpResponse] = None
   def body: Option[HttpBody] = None
+  def duration: Option[Duration] = None
 }
 case class HttpResultInvalidMethod(input: String) extends HttpResult
 case class HttpResultInvalidUrl(url: String) extends HttpResult
@@ -39,10 +41,12 @@ case class HttpResultInvalidHeader(name: String, value: String) extends HttpResu
 case class HttpResultInvalidBody() extends HttpResult
 case class HttpResultRawResponse(
     rawResponse: HttpResponse,
-    data: Option[HttpBody] = None
+    data: Option[HttpBody] = None,
+    elapsed: Option[Duration] = None
 ) extends HttpResult {
   override def response: Option[HttpResponse] = Some(rawResponse)
   override def body: Option[HttpBody] = data
+  override def duration: Option[Duration] = elapsed
 }
 
 object Http {
@@ -72,7 +76,8 @@ object Http {
     request: HttpRequest,
     timeout: Option[Duration] = Some(Duration(15, TimeUnit.SECONDS))
   ): Future[HttpResponse] = {
-    // TODO: figure out how to enforce client connection timeouts
+    // TODO: Figure out how to enforce client connection timeouts.
+    //       From what I have read, Akka HTTP doesn't like the idea of timeouts.
     http.singleRequest(request)
   }
   def rq(
@@ -83,6 +88,7 @@ object Http {
     collect: Boolean = false,
     timeout: Option[Duration] = None
   ): Future[HttpResult] = {
+    val start: Instant = Instant.now
     (
       validateMethod(method),
       validateHeaders(headers)
@@ -110,7 +116,7 @@ object Http {
         collect match {
           case false => {
             response.entity.discardBytes()
-            Future.successful(HttpResultRawResponse(response))
+            Future.successful(HttpResultRawResponse(response, elapsed = Some(Time.diff(start, Instant.now))))
           }
           case true => {
             response.entity.toStrict(Duration(5, TimeUnit.SECONDS)).collect { case r =>
@@ -196,7 +202,7 @@ object TryHttp extends App {
   val result = Await.result(Http.get("http://rocket:1337/"), Duration(5, TimeUnit.SECONDS))
 
   result match {
-    case HttpResultRawResponse(response, None) => {
+    case HttpResultRawResponse(response, _, _) => {
       val json = Json.obj(
         "status" -> response.status.intValue,
         "headers" -> Json.arr(response.headers.map(h =>

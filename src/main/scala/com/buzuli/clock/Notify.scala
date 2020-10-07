@@ -29,7 +29,7 @@ object Notify {
             println(s"""[Slack] Invalid message body""")
             false
           }
-          case HttpResultRawResponse(response, None) => {
+          case HttpResultRawResponse(response, _, _) => {
             val (result, outcome) = response.status.intValue match {
               case 200 => (true, "succeeded")
               case _ => (false, "failed")
