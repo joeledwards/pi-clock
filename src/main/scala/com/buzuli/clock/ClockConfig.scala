@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.util.{Failure, Success, Try}
 import com.buzuli.util.Env
 
-import scala.concurrent.duration.{Duration, MINUTES, SECONDS}
+import scala.concurrent.duration._
 
 sealed trait RunMode
 case object ClockMode extends RunMode
@@ -30,21 +30,9 @@ object Config {
   lazy val internetHealthCheck: Boolean = Env.getToggle("PI_CLOCK_INTERNET_HEALTH_CHECK").getOrElse(false)
   lazy val internetResetPin: Option[Int] = Env.getInt("PI_CLOCK_INTERNET_RESET_PIN")
   lazy val internetResetNc: Boolean = Env.getToggle("PI_CLOCK_INTERNET_RESET_NC").getOrElse(false)
-  lazy val internetCheckInterval: Duration = Env.getInt("PI_CLOCK_INTERNET_CHECK_INTERVAL").map(
-    Duration(_, SECONDS)
-  ).getOrElse(
-    Duration(1, MINUTES)
-  )
-  lazy val internetOutageDuration: Duration = Env.getInt("PI_CLOCK_INTERNET_OUTAGE_DURATION").map(
-    Duration(_, SECONDS)
-  ).getOrElse(
-    Duration(5, MINUTES)
-  )
-  lazy val internetResetDelay: Duration = Env.getInt("PI_CLOCK_INTERNET_RESET_DELAY").map(
-    Duration(_ , SECONDS)
-  ).getOrElse(
-    Duration(15, MINUTES)
-  )
+  lazy val internetCheckInterval: Duration = Env.getDuration("PI_CLOCK_INTERNET_CHECK_INTERVAL").getOrElse(1.minute)
+  lazy val internetOutageDuration: Duration = Env.getDuration("PI_CLOCK_INTERNET_OUTAGE_DURATION").getOrElse(5.minutes)
+  lazy val internetResetDelay: Duration = Env.getDuration("PI_CLOCK_INTERNET_RESET_DELAY").getOrElse(15.minutes)
 
   lazy val notificationSlackWebhook: Option[String] = Env.get("PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK")
 
