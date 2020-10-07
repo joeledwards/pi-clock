@@ -1,7 +1,6 @@
 package com.buzuli.clock
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
@@ -28,19 +27,23 @@ class InternetHealth {
       RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING
     ))
   }
-  private val gpioPin: Option[Pin] = Config.internetResetPin flatMap { pinAddress =>
+  private val gpioPin: Option[Pin] = Config.internetPowerPin flatMap { pinAddress =>
     Option(RaspiPin.getPinByAddress(pinAddress)) match {
       case None => {
         println(s"No valid reset pin supplied: ${pinAddress}")
         None
       }
       case Some(pin) => {
-        println(s"Setting up reset pin: ${pin}")
+        println(s"Initializing the Internet reset pin: ${pin}")
         Scheduler.default.runAfter(1.second) {
           // This must be run after gpioPin has been assigned a value
           gpio.foreach { g =>
             powerOn()
-            g.`export`(pin, PinMode.DIGITAL_OUTPUT)
+            g.`export`(
+              pin,
+              PinMode.DIGITAL_OUTPUT,
+              if (Config.internetPowerHigh) PinState.HIGH else PinState.LOW
+            )
           }
         }
         Some(pin)
@@ -55,23 +58,27 @@ class InternetHealth {
     gpio.foreach { _.setState(pin, PinState.LOW) }
   }
 
-  def powerOn(): Unit = Config.internetResetNc match {
-    case true => setLow()
-    case false => setHigh()
-  }
-  def powerOff(): Unit = Config.internetResetNc match {
+  def powerOn(): Unit = Config.internetPowerHigh match {
     case true => setHigh()
     case false => setLow()
+  }
+  def powerOff(): Unit = Config.internetPowerHigh match {
+    case true => setLow()
+    case false => setHigh()
   }
 
   def resetInternet(): Unit = {
     gpioPin.foreach { _ =>
-      println("Cutting router power ...")
       lastReset = Some(Time.now)
+
+      println("Cutting Internet power ...")
       powerOff()
-      Async.delay(1000) andThen { case _ =>
-        println("Restoring router power ...")
+      println("Power is off.")
+
+      Scheduler.default.runAfter(1.second) {
+        println("Restoring Internet power ...")
         powerOn()
+        println("Power is on.")
       }
     }
   }
@@ -84,7 +91,7 @@ class InternetHealth {
         Config.internetCheckInterval,
         startImmediately = true
       ) { Try {
-        Await.result(checkHealth(), 45.seconds)
+        Await.result(checkHealth(), Config.internetCheckInterval * 0.75)
       } match {
         case Failure(error) => {
           println(s"Error in the Internet health-check system: ${error}")
@@ -94,7 +101,7 @@ class InternetHealth {
         case Success(Some(InternetOutage)) => {
           offlineSince = offlineSince match {
             case Some(whence) => {
-              println(s"No Internet connectivity since ${whence}.")
+              println(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
               val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
               val sufficientResetDelay = lastReset match {
                 case None => true

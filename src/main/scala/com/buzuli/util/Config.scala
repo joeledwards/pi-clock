@@ -19,12 +19,20 @@ trait ConfigSupplier {
 
   def parseToggle(value: String): Option[Boolean] = {
     value.toLowerCase match {
+      case "enabled" => Some(true)
+      case "disabled" => Some(false)
+      case "enable" => Some(true)
+      case "disable" => Some(false)
       case "true" => Some(true)
       case "false" => Some(false)
       case "yes" => Some(true)
       case "no" => Some(false)
       case "on" => Some(true)
       case "off" => Some(false)
+      case "t" => Some(true)
+      case "f" => Some(false)
+      case "y" => Some(true)
+      case "n" => Some(false)
       case "1" => Some(true)
       case "0" => Some(false)
       case _ => None

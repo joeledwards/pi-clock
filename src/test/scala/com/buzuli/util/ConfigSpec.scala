@@ -26,14 +26,28 @@ class ConfigSpec extends AnyWordSpec with Matchers {
     "fetching boolean values" should {
       "parse toggle values" in {
         assert(ConfigSupplier.of(Map("t" -> "0")).getToggle("u") == None)
+        assert(ConfigSupplier.of(Map("t" -> "bob")).getToggle("t") == None)
+
         assert(ConfigSupplier.of(Map("t" -> "0")).getToggle("t") == Some(false))
         assert(ConfigSupplier.of(Map("t" -> "1")).getToggle("t") == Some(true))
+
+        assert(ConfigSupplier.of(Map("t" -> "n")).getToggle("t") == Some(false))
+        assert(ConfigSupplier.of(Map("t" -> "y")).getToggle("t") == Some(true))
         assert(ConfigSupplier.of(Map("t" -> "no")).getToggle("t") == Some(false))
         assert(ConfigSupplier.of(Map("t" -> "yes")).getToggle("t") == Some(true))
+
         assert(ConfigSupplier.of(Map("t" -> "off")).getToggle("t") == Some(false))
         assert(ConfigSupplier.of(Map("t" -> "on")).getToggle("t") == Some(true))
+
+        assert(ConfigSupplier.of(Map("t" -> "f")).getToggle("t") == Some(false))
+        assert(ConfigSupplier.of(Map("t" -> "t")).getToggle("t") == Some(true))
         assert(ConfigSupplier.of(Map("t" -> "false")).getToggle("t") == Some(false))
         assert(ConfigSupplier.of(Map("t" -> "true")).getToggle("t") == Some(true))
+
+        assert(ConfigSupplier.of(Map("t" -> "disable")).getToggle("t") == Some(false))
+        assert(ConfigSupplier.of(Map("t" -> "enable")).getToggle("t") == Some(true))
+        assert(ConfigSupplier.of(Map("t" -> "disabled")).getToggle("t") == Some(false))
+        assert(ConfigSupplier.of(Map("t" -> "enabled")).getToggle("t") == Some(true))
       }
     }
     "fetching durations" should {

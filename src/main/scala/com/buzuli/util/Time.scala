@@ -14,7 +14,7 @@ object Time {
   val NANOS_PER_DAY = NANOS_PER_HOUR * 24L
 
   def now(): Instant = Instant.now
-  def since(whence: Instant): Duration = diff(now, whence)
+  def since(whence: Instant): Duration = diff(whence, now)
   def diff(start: Instant, end: Instant): Duration = {
     Duration(
       java.time.Duration.between(start, end).toMillis,
