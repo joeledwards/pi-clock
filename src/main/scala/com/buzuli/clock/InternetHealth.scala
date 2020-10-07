@@ -52,11 +52,14 @@ class InternetHealth {
   }
 
   def resetInternet(): Unit = {
-    gpioPin.foreach { _ => println("Resetting the Internet connection ...") }
-    lastReset = Some(Time.now)
-    powerOff()
-    Async.delay(1000) andThen { case _ =>
-      powerOn()
+    gpioPin.foreach { _ =>
+      println("Cutting router power ...")
+      lastReset = Some(Time.now)
+      powerOff()
+      Async.delay(1000) andThen { case _ =>
+        println("Restoring router power ...")
+        powerOn()
+      }
     }
   }
 
@@ -88,6 +91,7 @@ class InternetHealth {
               if (sufficientOfflineDuration && sufficientResetDelay) {
                 // Only rest if we have been offline for 5 minutes and
                 // we haven't attempted a reset in the last 5 minutes.
+                println("Internet reset needed.")
                 resetInternet()
               }
               Some(whence)
@@ -105,8 +109,8 @@ class InternetHealth {
               val elapsed = Duration.fromNanos(
                 java.time.Duration.between(whence, Instant.now).toNanos
               )
-              println(s"Internet connectivity restored after ${elapsed}.")
-              Notify.slack(s"Internet connectivity restored after ${elapsed}")
+              println(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
+              Notify.slack(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}")
               offlineSince = None
             }
           }
@@ -199,7 +203,7 @@ class InternetHealth {
     }
     case Success(HttpResultRawResponse(response, _, duration)) => {
       val durationString = duration match {
-        case Some(duration) => s" (took ${Time.prettyDuration(duration)})"
+        case Some(elapsed) => s" (took ${Time.prettyDuration(elapsed)})"
         case None => ""
       }
       println(s"""Status ${response.status} from service ${service}${durationString}""")
