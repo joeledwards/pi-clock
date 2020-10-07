@@ -40,6 +40,11 @@ object Config {
   ).getOrElse(
     Duration(5, MINUTES)
   )
+  lazy val internetResetDelay: Duration = Env.getInt("PI_CLOCK_INTERNET_RESET_DELAY").map(
+    Duration(_ , SECONDS)
+  ).getOrElse(
+    Duration(15, MINUTES)
+  )
 
   lazy val notificationSlackWebhook: Option[String] = Env.get("PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK")
 

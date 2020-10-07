@@ -7,7 +7,7 @@ import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResu
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 sealed trait Outage
@@ -23,16 +23,29 @@ class InternetHealth {
 
   private var offlineSince: Option[Instant] = None
   private var lastReset: Option[Instant] = None
-  private lazy val gpio: Option[RaspiGpioProvider] = Some(
-    new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING)
-  )
-  private val gpioPin: Option[Pin] = Config.internetResetPin map { pinAddress =>
-    val pin: Pin = RaspiPin.getPinByAddress(pinAddress)
-    gpio.foreach { g =>
-      powerOn()
-      g.`export`(pin, PinMode.DIGITAL_OUTPUT)
+  private lazy val gpio: Option[RaspiGpioProvider] = {
+    Some(new RaspiGpioProvider(
+      RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING
+    ))
+  }
+  private val gpioPin: Option[Pin] = Config.internetResetPin flatMap { pinAddress =>
+    Option(RaspiPin.getPinByAddress(pinAddress)) match {
+      case None => {
+        println(s"No valid reset pin supplied: ${pinAddress}")
+        None
+      }
+      case Some(pin) => {
+        println(s"Setting up reset pin: ${pin}")
+        Scheduler.default.runAfter(1.second) {
+          // This must be run after gpioPin has been assigned a value
+          gpio.foreach { g =>
+            powerOn()
+            g.`export`(pin, PinMode.DIGITAL_OUTPUT)
+          }
+        }
+        Some(pin)
+      }
     }
-    pin
   }
 
   def setHigh(): Unit = gpioPin foreach { pin =>
@@ -71,7 +84,7 @@ class InternetHealth {
         Config.internetCheckInterval,
         startImmediately = true
       ) { Try {
-        Await.result(checkHealth(), Duration(45, TimeUnit.SECONDS))
+        Await.result(checkHealth(), 45.seconds)
       } match {
         case Failure(error) => {
           println(s"Error in the Internet health-check system: ${error}")
@@ -82,10 +95,10 @@ class InternetHealth {
           offlineSince = offlineSince match {
             case Some(whence) => {
               println(s"No Internet connectivity since ${whence}.")
-              val sufficientOfflineDuration = Time.since(whence).gteq(Duration(5, TimeUnit.MINUTES))
+              val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
               val sufficientResetDelay = lastReset match {
                 case None => true
-                case Some(whence) if Time.since(whence).gteq(Config.internetOutageDuration) => true
+                case Some(whence) if Time.since(whence).gteq(Config.internetResetDelay) => true
                 case _ => false
               }
               if (sufficientOfflineDuration && sufficientResetDelay) {

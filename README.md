@@ -28,6 +28,9 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_INTERNET_HEALTH_CHECK` : Should the device perform regular Internet health checks (default: `false`)
 - `PI_CLOCK_INTERNET_RESET_PIN` : The GPIO pin to which the reset relay is connected
 - `PI_CLOCK_INTERNET_RESET_NC` : Is the reset relay normally-closed (default: `false`)
+- `PI_CLOCK_INTERNET_CHECK_INTERVAL` : Frequency at which to perform Internet health checks (default: `1m`)
+- `PI_CLOCK_INTERNET_OUTAGE_DURATION` : Outage duration required for an Internet connection reset (default: `5m`)
+- `PI_CLOCK_INTERNET_RESET_DELAY` : Minimum delay between Internet connection resets (default: `15m`)
 - `PI_CLOCK_HEALTH_SLACK_WEBHOOK` : Slack webhook for health checks.
 - `PI_CLOCK_SENSE_HAT_INSTALLED` : Sense-hat system is installed (default: `false`)
 - `PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK` : Slack webhook for notifications.
