@@ -4,6 +4,7 @@ import java.time.Instant
 
 import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -52,10 +53,22 @@ class InternetHealth {
   }
 
   def setHigh(): Unit = gpioPin foreach { pin =>
-    gpio.foreach { _.setState(pin, PinState.HIGH) }
+    try {
+      gpio.foreach { _.setState(pin, PinState.HIGH) }
+    } catch {
+      case e: Exception =>
+        println(s"Error pulling pin ${pin} high")
+        e.printStackTrace()
+    }
   }
   def setLow(): Unit = gpioPin foreach { pin =>
-    gpio.foreach { _.setState(pin, PinState.LOW) }
+    try {
+      gpio.foreach { _.setState(pin, PinState.LOW) }
+    } catch {
+      case e: Exception =>
+        println(s"Error pulling pin ${pin} low")
+        e.printStackTrace()
+    }
   }
 
   def powerOn(): Unit = Config.internetPowerHigh match {
