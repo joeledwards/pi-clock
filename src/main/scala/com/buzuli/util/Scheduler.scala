@@ -10,17 +10,13 @@ trait Scheduled {
 }
 
 object Scheduled {
-  def of[T](future: ScheduledFuture[T]): Scheduled = new Scheduled {
-    override def cancel(interrupt: Boolean = false): Unit = future.cancel(interrupt)
-  }
+  def of[T](future: ScheduledFuture[T]): Scheduled = (interrupt: Boolean) => future.cancel(interrupt)
 }
 
 class Scheduler {
   val executor = new ScheduledThreadPoolExecutor(1)
 
-  def runnable(task: => Unit): Runnable = new Runnable {
-    def run(): Unit = task
-  }
+  def runnable(task: => Unit): Runnable = () => task
 
   def runAfter(delay: Duration)(task: => Unit): Scheduled = {
     Scheduled.of(executor.schedule(runnable(task), delay.toNanos, TimeUnit.NANOSECONDS))

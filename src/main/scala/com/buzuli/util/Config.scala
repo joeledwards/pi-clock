@@ -63,8 +63,8 @@ trait ConfigSupplier {
   }
 
   def getInt(key: String): Option[Int] = getAs(key) { _ match {
-    case v if v.startsWith("0x") => Some(Integer.parseInt(v.slice(2, v.length), 16))
-    case v => Some(Integer.parseInt(v))
+    case v if v.startsWith("0x") => Option(Integer.parseInt(v.slice(2, v.length), 16))
+    case v => Option(Integer.parseInt(v))
   } }
 
   def getToggle(key: String): Option[Boolean] = getAs(key)(parseToggle(_))

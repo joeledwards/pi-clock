@@ -9,6 +9,7 @@ class ConfigSpec extends AnyWordSpec with Matchers {
   "ConfigSupplier" when {
     "fetching string values" should {
       "return Some when found" in {
+        assert(ConfigSupplier.of(Map("name" -> "")).get("name") == Some(""))
         assert(ConfigSupplier.of(Map("name" -> "buzuli")).get("name") == Some("buzuli"))
       }
       "return None when not found" in {
@@ -17,10 +18,26 @@ class ConfigSpec extends AnyWordSpec with Matchers {
     }
     "fetching numeric values" should {
       "parse decimal values as integers" in {
+        assert(ConfigSupplier.of(Map("channel" -> "0")).getInt("channel") == Some(0))
+        assert(ConfigSupplier.of(Map("channel" -> "5")).getInt("channel") == Some(5))
         assert(ConfigSupplier.of(Map("channel" -> "39")).getInt("channel") == Some(39))
       }
       "parse hex values as integers" in {
+        assert(ConfigSupplier.of(Map("channel" -> "0x0")).getInt("channel") == Some(0))
+        assert(ConfigSupplier.of(Map("channel" -> "0x5")).getInt("channel") == Some(5))
         assert(ConfigSupplier.of(Map("channel" -> "0x27")).getInt("channel") == Some(39))
+        assert(ConfigSupplier.of(Map("channel" -> "0x020")).getInt("channel") == Some(32))
+      }
+      "invalid values result in None" in {
+        assert(ConfigSupplier.of(Map()).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "null")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "a")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "a12")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "z39")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "12a")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "39z")).getInt("channel") == None)
+        assert(ConfigSupplier.of(Map("channel" -> "10.0.0.13")).getInt("channel") == None)
       }
     }
     "fetching boolean values" should {
