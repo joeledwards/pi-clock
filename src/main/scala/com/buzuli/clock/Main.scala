@@ -1,11 +1,8 @@
 package com.buzuli.clock
 
 import java.time.ZoneId
-import java.util.concurrent.TimeUnit
 
 import com.buzuli.util.{Http, SysInfo}
-
-import scala.concurrent.duration.Duration
 
 object Main extends App {
   if (Config.checkIntegrity) {
@@ -13,7 +10,7 @@ object Main extends App {
     sys.exit(0)
   }
 
-  private var displayContent: DisplayContent = DisplayUtcAndIp
+  private var displayContent: DisplayContent = DisplayUtcAndHost
 
   println(s"All Addresses:")
   println(SysInfo.addresses.value.map(_.mkString("\n")).getOrElse(""))
@@ -69,6 +66,7 @@ object Main extends App {
             case false => s"${localTs.toString.slice(0, 19)}L"
           }
 
+          val host = SysInfo.host.value.getOrElse("--")
           val ipStr = (Config.humanFriendly, SysInfo.ip.value.getOrElse("--")) match {
             case (true, ip) => {
               val seconds = timestamp.toString.slice(17, 19)
@@ -81,7 +79,7 @@ object Main extends App {
 
           Some(local) ::
             Some(utc) ::
-            Some(SysInfo.host.value.getOrElse("--")) ::
+            Some(host) ::
             Some(ipStr) ::
             Nil
         }
@@ -89,8 +87,11 @@ object Main extends App {
           val utc = s"${timestamp.toString.slice(0, 16).replace('T', ' ')}"
           val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 16).replace('T', ' ')}"
           val ip = SysInfo.ip.value.getOrElse("--")
+          val host = SysInfo.host.value.getOrElse("--")
 
           displayContent match {
+            case DisplayUtcAndHost => Some(utc) :: Some(host) :: Nil
+            case DisplayLocalAndHost => Some(local) :: Some(host) :: Nil
             case DisplayUtcAndIp => Some(utc) :: Some(ip) :: Nil
             case DisplayLocalAndIp => Some(local) :: Some(ip) :: Nil
             case DisplayTimesUtcTop => Some(utc) :: Some(local) :: Nil
@@ -144,6 +145,12 @@ sealed trait DisplayContent {
   def next: DisplayContent
 }
 
+case object DisplayUtcAndHost extends DisplayContent {
+  override def next: DisplayContent = DisplayLocalAndHost
+}
+case object DisplayLocalAndHost extends DisplayContent {
+  override def next: DisplayContent = DisplayUtcAndIp
+}
 case object DisplayUtcAndIp extends DisplayContent {
   override def next: DisplayContent = DisplayLocalAndIp
 }
@@ -154,5 +161,5 @@ case object DisplayTimesUtcTop extends DisplayContent {
   override def next: DisplayContent = DisplayTimesLocalTop
 }
 case object DisplayTimesLocalTop extends DisplayContent {
-  override def next: DisplayContent = DisplayUtcAndIp
+  override def next: DisplayContent = DisplayUtcAndHost
 }
