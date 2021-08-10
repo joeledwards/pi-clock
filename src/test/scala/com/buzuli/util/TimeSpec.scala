@@ -1,11 +1,10 @@
 package com.buzuli.util
 
+import com.buzuli.UnitSpec
+
 import scala.concurrent.duration._
 
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-
-class TimeSpec extends AnyWordSpec with Matchers {
+class TimeSpec extends UnitSpec {
   "prettyDuration" when {
     "formatting durations" should {
       "correctly format sub-millisecond durations" in {

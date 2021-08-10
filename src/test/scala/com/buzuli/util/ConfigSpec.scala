@@ -1,11 +1,13 @@
 package com.buzuli.util
 
+import com.buzuli.UnitSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
 import scala.concurrent.duration._
 
 
-class ConfigSpec extends AnyWordSpec with Matchers {
+class ConfigSpec extends UnitSpec {
   "ConfigSupplier" when {
     "fetching string values" should {
       "return Some when found" in {

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="pi-clock_8964" />
-    <profile name="sbt 2" modules="pi-clock">
+    <profile name="sbt 1" modules="pi-clock">
       <parameters>
         <parameter value="-target:jvm-8" />
       </parameters>

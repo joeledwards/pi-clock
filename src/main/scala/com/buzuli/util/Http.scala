@@ -2,13 +2,12 @@ package com.buzuli.util
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
-import sttp.client._
 import akka.http.scaladsl.{Http => AkkaHttp}
 import akka.http.scaladsl.model._
 import play.api.libs.json._
+import sttp.client3.HttpURLConnectionBackend
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}

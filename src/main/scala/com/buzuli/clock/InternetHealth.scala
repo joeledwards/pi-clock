@@ -4,7 +4,6 @@ import java.time.Instant
 
 import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
-import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
