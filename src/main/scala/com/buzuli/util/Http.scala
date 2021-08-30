@@ -3,11 +3,13 @@ package com.buzuli.util
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
-import akka.http.scaladsl.{Http => AkkaHttp}
 import akka.http.scaladsl.model._
+import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import play.api.libs.json._
-import sttp.client3.HttpURLConnectionBackend
+import sttp.{client3 => http}
+import sttp.client3.{Response, SttpBackendOptions}
+import sttp.client3.akkahttp.AkkaHttpBackend
+import sttp.model.{Header, MediaType, Method, Uri}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -30,7 +32,8 @@ case class HttpBodyJson(body: JsValue) extends HttpBody {
 }
 
 sealed trait HttpResult {
-  def response: Option[HttpResponse] = None
+  def response: Option[Response[Either[String, String]]] = None
+  def status: Option[Int] = None
   def body: Option[HttpBody] = None
   def duration: Option[Duration] = None
 }
@@ -39,26 +42,28 @@ case class HttpResultInvalidUrl(url: String) extends HttpResult
 case class HttpResultInvalidHeader(name: String, value: String) extends HttpResult
 case class HttpResultInvalidBody() extends HttpResult
 case class HttpResultRawResponse(
-    rawResponse: HttpResponse,
+    rawResponse: Response[Either[String, String]],
     data: Option[HttpBody] = None,
     elapsed: Option[Duration] = None
 ) extends HttpResult {
-  override def response: Option[HttpResponse] = Some(rawResponse)
+  override def response: Some[Response[Either[String, String]]] = Some(rawResponse)
+  override def status: Option[Int] = response.map(_.code.code)
   override def body: Option[HttpBody] = data
   override def duration: Option[Duration] = elapsed
 }
 
 object Http {
-  implicit val httpBackend = HttpURLConnectionBackend()
-  implicit val system = ActorSystem("pi-clock")
+  implicit val system: ActorSystem = ActorSystem("pi-clock")
+  implicit val httpOptions = SttpBackendOptions.connectionTimeout(5.seconds)
+  implicit val httpBackend = AkkaHttpBackend(httpOptions)
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   object method {
-    def apply(method: String): Validity[String, HttpMethod] = validateMethod(method)
+    def apply(method: String): Validity[String, Method] = validateMethod(method)
   }
 
   object header {
-    def apply(name: String, value: String): Validity[(String, String), HttpHeader] = {
+    def apply(name: String, value: String): Validity[(String, String), Header] = {
       validateHeader((name, value))
     }
   }
@@ -69,66 +74,56 @@ object Http {
     def json(body: JsValue): HttpBody = HttpBodyJson(body)
   }
 
-  def http = AkkaHttp()
-
-  def makeRequest(
-    request: HttpRequest,
-    timeout: Option[Duration] = Some(Duration(15, TimeUnit.SECONDS))
-  ): Future[HttpResponse] = {
-    // TODO: Figure out how to enforce client connection timeouts.
-    //       From what I have read, Akka HTTP doesn't like the idea of timeouts.
-    http.singleRequest(request)
-  }
   def rq(
     method: String,
     url: String,
     headers: List[(String, String)] = Nil,
     body: Option[HttpBody] = None,
-    collect: Boolean = false,
-    timeout: Option[Duration] = None
+    timeout: Duration = 15.minutes
   ): Future[HttpResult] = {
     val start: Instant = Instant.now
+
     (
+      Uri.parse(url),
       validateMethod(method),
       validateHeaders(headers)
     ) match {
-      case (Invalid(_, _), _) => Future.successful(
+      case (Left(_), _, _) => Future.successful(
+        HttpResultInvalidUrl(url)
+      )
+      case (_, Invalid(_, _), _) => Future.successful(
         HttpResultInvalidMethod(method)
       )
-      case (_, Invalid(_, inv :: _ :: Nil)) => Future.successful(
+      case (_, _, Invalid(_, inv :: _ :: Nil)) => Future.successful(
         HttpResultInvalidHeader(inv._1, inv._2)
       )
-      case (Valid(mth), Valid(hdrs)) => makeRequest(
-        HttpRequest(
-          method = mth,
-          uri = url,
-          headers = hdrs,
-          entity = body match {
-            case None => HttpEntity.Empty
-            case Some(HttpBodyBytes(bytes)) => HttpEntity(bytes)
-            case Some(HttpBodyText(text)) => HttpEntity(text)
-            case Some(HttpBodyJson(json)) => HttpEntity(ContentTypes.`application/json`, json.toString.getBytes)
-          }
-        ),
-        timeout = timeout
-      ) flatMap { response =>
-        collect match {
-          case false => {
-            response.entity.discardBytes()
-            Future.successful(HttpResultRawResponse(response, elapsed = Some(Time.diff(start, Instant.now))))
-          }
-          case true => {
-            response.entity.toStrict(Duration(5, TimeUnit.SECONDS)).collect { case r =>
-              r.getData().asByteBuffer.array()
-            } map { bytes =>
-              val data: HttpBody = response.entity.getContentType() match {
-                case ContentTypes.`application/json` => HttpBodyJson(Json.parse(bytes))
-                case ContentTypes.`text/plain(UTF-8)` => HttpBodyText(bytes.toString)
-                case _ => HttpBodyBytes(bytes)
-              }
-              HttpResultRawResponse(response, Some(data))
+      case (Right(uri), Valid(method), Valid(headerList)) => {
+        val headers = headerList.map(h => (h.name, h.value)).toMap
+        val baseRequest = http.basicRequest
+          .readTimeout(timeout)
+          .method(method, uri)
+          .headers(headers)
+
+        val httpRequest = body match {
+          case None => baseRequest
+          case Some(HttpBodyBytes(bytes)) => baseRequest.contentType(MediaType.ApplicationOctetStream).body(bytes)
+          case Some(HttpBodyJson(json)) => baseRequest.contentType(MediaType.ApplicationJson).body(json.toString)
+          case Some(HttpBodyText(text)) => baseRequest.contentType(MediaType.TextPlain).body(text)
+        }
+
+        httpBackend.send(httpRequest) map { response =>
+          val statusCode = response.code.code
+          val elapsed = Some(Time.diff(start, Instant.now))
+          val data = response.body match {
+            case Left(errorMessage) => HttpBodyText(errorMessage)
+            case Right(data) => response.contentType match {
+              case Some(MediaType.ApplicationJson.mainType) => HttpBodyJson(Json.parse(data))
+              case Some(MediaType.TextPlain.mainType) => HttpBodyText(data)
+              case _ => HttpBodyBytes(data.getBytes)
             }
           }
+
+          HttpResultRawResponse(response, Some(data), elapsed)
         }
       }
     }
@@ -137,7 +132,7 @@ object Http {
   def get(
     url: String,
     headers: List[(String, String)] = Nil,
-    timeout: Option[Duration] = None
+    timeout: Duration = 15.seconds
   ): Future[HttpResult] = rq(
     "GET",
     url,
@@ -149,7 +144,7 @@ object Http {
     url: String,
     headers: List[(String, String)] = Nil,
     body: Option[HttpBody] = None,
-    timeout: Option[Duration] = None
+    timeout: Duration = 15.seconds
   ): Future[HttpResult] = rq(
     "POST",
     url,
@@ -158,22 +153,22 @@ object Http {
     timeout = timeout
   )
 
-  private def validateMethod(method: String): Validity[String, HttpMethod] = method.toUpperCase match {
-    case "CONNECT" => Valid(HttpMethods.CONNECT)
-    case "DELETE" => Valid(HttpMethods.DELETE)
-    case "GET" => Valid(HttpMethods.GET)
-    case "HEAD" => Valid(HttpMethods.HEAD)
-    case "OPTIONS" => Valid(HttpMethods.OPTIONS)
-    case "PATCH" => Valid(HttpMethods.PATCH)
-    case "PUT" => Valid(HttpMethods.PUT)
-    case "POST" => Valid(HttpMethods.POST)
-    case "TRACE" => Valid(HttpMethods.TRACE)
+  private def validateMethod(method: String): Validity[String, Method] = method.toUpperCase match {
+    case "CONNECT" => Valid(Method.CONNECT)
+    case "DELETE" => Valid(Method.DELETE)
+    case "GET" => Valid(Method.GET)
+    case "HEAD" => Valid(Method.HEAD)
+    case "OPTIONS" => Valid(Method.OPTIONS)
+    case "PATCH" => Valid(Method.PATCH)
+    case "PUT" => Valid(Method.PUT)
+    case "POST" => Valid(Method.POST)
+    case "TRACE" => Valid(Method.TRACE)
     case um => Invalid(s"""Unsupported HTTP method "$um"""", method)
   }
 
   private def validateHeaders(
     headers: List[(String, String)]
-  ): Validity[List[(String, String)], List[HttpHeader]] = {
+  ): Validity[List[(String, String)], List[Header]] = {
     val (invalids, valids) = headers map {
       validateHeader(_)
     } partition {
@@ -189,12 +184,15 @@ object Http {
 
   private def validateHeader(
     header: (String, String)
-  ): Validity[(String, String), HttpHeader] = HttpHeader.parse(header._1, header._2) match {
-    case Ok(header, errors) => Valid(header)
-    case Error(error) => Invalid(error.detail, header)
+  ): Validity[(String, String), Header] = Header.safeApply(header._1, header._2) match {
+    case Left(errorMessage) => Invalid(errorMessage, header)
+    case Right(header) => Valid(header)
   }
 
-  def shutdown(): Unit = system.terminate()
+  def shutdown(): Unit = {
+    httpBackend.close()
+    system.terminate()
+  }
 }
 
 object TryHttp extends App {
@@ -203,7 +201,7 @@ object TryHttp extends App {
   result match {
     case HttpResultRawResponse(response, _, _) => {
       val json = Json.obj(
-        "status" -> response.status.intValue,
+        "status" -> response.code.code,
         "headers" -> Json.arr(response.headers.map(h =>
           h.name -> h.value
         ))

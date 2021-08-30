@@ -30,7 +30,7 @@ object Notify {
             false
           }
           case HttpResultRawResponse(response, _, _) => {
-            val (result, outcome) = response.status.intValue match {
+            val (result, outcome) = response.code.code match {
               case 200 => (true, "succeeded")
               case _ => (false, "failed")
             }

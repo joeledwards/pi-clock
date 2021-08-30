@@ -22,6 +22,7 @@ libraryDependencies += "com.pi4j" % "pi4j-core" % "1.2"
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
 libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.3.13"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % "3.3.13"
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.8"

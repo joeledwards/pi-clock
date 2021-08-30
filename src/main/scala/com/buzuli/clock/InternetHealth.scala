@@ -2,7 +2,11 @@ package com.buzuli.clock
 
 import java.time.Instant
 
-import com.buzuli.util.{Async, Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
+import com.buzuli.util.{
+  Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader,
+  HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse,
+  Scheduled, Scheduler, Time
+}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -238,7 +242,7 @@ class InternetHealth {
         case Some(elapsed) => s" (took ${Time.prettyDuration(elapsed)})"
         case None => ""
       }
-      println(s"""Status ${response.status} from service ${service}${durationString}""")
+      println(s"""Status ${response.code.code} from service ${service}${durationString}""")
     }
   }
 }
