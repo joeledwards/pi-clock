@@ -76,6 +76,8 @@ class Button(
                 // Normally Open
                 case (false, Some(PinState.HIGH)) => pressed()
                 case (false, Some(PinState.LOW)) => released()
+                // No pin configured
+                case (_, None) =>
               }
             }
           })

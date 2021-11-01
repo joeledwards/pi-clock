@@ -64,6 +64,7 @@ class InternetHealth {
         e.printStackTrace()
     }
   }
+
   def setLow(): Unit = gpioPin foreach { pin =>
     try {
       gpio.foreach { _.setState(pin, PinState.LOW) }
@@ -78,6 +79,7 @@ class InternetHealth {
     case true => setHigh()
     case false => setLow()
   }
+
   def powerOff(): Unit = Config.internetPowerHigh match {
     case true => setLow()
     case false => setHigh()
@@ -103,60 +105,66 @@ class InternetHealth {
     if (scheduled.isEmpty) {
       println("Scheduling regular Internet health checks ...")
 
-      scheduled = Some(scheduler.runEvery(
-        Config.internetCheckInterval,
-        startImmediately = true
-      ) { Try {
-        Await.result(checkHealth(), Config.internetCheckInterval * 0.75)
-      } match {
-        case Failure(error) => {
-          println(s"Error in the Internet health-check system: ${error}")
-          error.printStackTrace()
-        }
-        case Success(Some(LocalNetworkOutage)) => println("No local network connectivity.")
-        case Success(Some(InternetOutage)) => {
-          offlineSince = offlineSince match {
-            case Some(whence) => {
-              println(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
-              val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
-              val sufficientResetDelay = lastReset match {
-                case None => true
-                case Some(whence) if Time.since(whence).gteq(Config.internetResetDelay) => true
-                case _ => false
+      scheduled = Some(
+        scheduler.runEvery(
+          Config.internetCheckInterval,
+          startImmediately = true
+        ) {
+          Try {
+            Await.result(checkHealth(), Config.internetCheckInterval * 0.75)
+          } match {
+            case Failure(error) => {
+              println(s"Error in the Internet health-check system: ${error}")
+              error.printStackTrace()
+            }
+            case Success(Some(LocalNetworkOutage)) => println("No local network connectivity.")
+            case Success(Some(InternetOutage)) => {
+              offlineSince = offlineSince match {
+                case Some(whence) => {
+                  println(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
+                  val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
+                  val sufficientResetDelay = lastReset match {
+                    case None => true
+                    case Some(whence) if Time.since(whence).gteq(Config.internetResetDelay) => true
+                    case _ => false
+                  }
+                  if (sufficientOfflineDuration && sufficientResetDelay) {
+                    // Only rest if we have been offline for 5 minutes and
+                    // we haven't attempted a reset in the last 5 minutes.
+                    println("Internet reset needed.")
+                    resetInternet()
+                  }
+                  Some(whence)
+                }
+                case None => {
+                  println(s"Internet connectivity lost.")
+                  Some(Instant.now)
+                }
               }
-              if (sufficientOfflineDuration && sufficientResetDelay) {
-                // Only rest if we have been offline for 5 minutes and
-                // we haven't attempted a reset in the last 5 minutes.
-                println("Internet reset needed.")
-                resetInternet()
+            }
+            case Success(otherOutage) => {
+              offlineSince match {
+                case None =>
+                case Some(whence) => {
+                  val elapsed = Duration.fromNanos(
+                    java.time.Duration.between(whence, Instant.now).toNanos
+                  )
+                  println(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
+                  Notify.slack(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}")
+                  offlineSince = None
+                }
               }
-              Some(whence)
-            }
-            case None => {
-              println(s"Internet connectivity lost.")
-              Some(Instant.now)
+              otherOutage match {
+                case None => println("Internet and local network are healthy.")
+                case Some(LocalServiceOutage(service)) => println(s"Local service '${service}' is unavailable")
+                case Some(InternetServiceOutage(service)) => println(s"Internet service '${service}' is unavailable.")
+                case Some(InternetOutage) => // Handled above
+                case Some(LocalNetworkOutage) => // Handled above
+              }
             }
           }
         }
-        case Success(otherOutage) => {
-          offlineSince match {
-            case None =>
-            case Some(whence) => {
-              val elapsed = Duration.fromNanos(
-                java.time.Duration.between(whence, Instant.now).toNanos
-              )
-              println(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
-              Notify.slack(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}")
-              offlineSince = None
-            }
-          }
-          otherOutage match {
-            case None => println("Internet and local network are healthy.")
-            case Some(LocalServiceOutage(service)) => println(s"Local service '${service}' is unavailable")
-            case Some(InternetServiceOutage(service)) => println(s"Internet service '${service}' is unavailable.")
-          }
-        }
-      } })
+      )
     }
   }
 
@@ -211,7 +219,7 @@ class InternetHealth {
     checkService("nebula", "http://nebula:1337/health-check")
   }
   private def checkVision() = {
-    checkService("vision", "http://vision:1337/health-check")
+    checkService("ironman", "http://ironman:1337/health-check")
   }
 
   private def checkService(service: String, url: String): Future[Either[String, String]] = {

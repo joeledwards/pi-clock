@@ -126,6 +126,9 @@ object Http {
           HttpResultRawResponse(response, Some(data), elapsed)
         }
       }
+      case (_, _, _) => {
+        throw new Exception("Uncategorized, invalid HTTP configuration.")
+      }
     }
   }
 
@@ -177,7 +180,7 @@ object Http {
     }
 
     invalids.length match {
-      case 0 => Valid(valids map { case Valid(header) => header })
+      case 0 => Valid(valids collect { case Valid(header) => header })
       case n => Invalid(s"Found ${n} invalid headers.", headers)
     }
   }
