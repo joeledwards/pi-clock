@@ -41,14 +41,13 @@ object Config {
   lazy val humanFriendly: Boolean = Env.getToggle("PI_CLOCK_HUMAN_FRIENDLY").getOrElse(false)
 
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
-  lazy val displayDimensions: DisplayDimensions = Env.getAs("PI_CLOCK_DISPLAY_DIMENSIONS") {
-    DisplayDimensions.of(_)
-  } getOrElse {
-    Display20x4
+  lazy val displayDimensions: DisplayDimensions = {
+    Env.getAs("PI_CLOCK_DISPLAY_DIMENSIONS") {
+      DisplayDimensions.of
+    } getOrElse {
+      Display20x4
+    }
   }
-  lazy val runMode: RunMode = Env.getAs("PI_CLOCK_RUN_MODE") {
-    RunMode.of(_)
-  } getOrElse {
-    ClockMode
-  }
+
+  lazy val runMode: RunMode = Env.getAs("PI_CLOCK_RUN_MODE") { RunMode.of } getOrElse { ClockMode }
 }

@@ -11,11 +11,31 @@ class ConfigSpec extends UnitSpec {
   "ConfigSupplier" when {
     "fetching string values" should {
       "return Some when found" in {
-        assert(ConfigSupplier.of(Map("name" -> "")).get("name") == Some(""))
-        assert(ConfigSupplier.of(Map("name" -> "buzuli")).get("name") == Some("buzuli"))
+        assert(ConfigSupplier.of(Map("name" -> "")).get("name").contains(""))
+        assert(ConfigSupplier.of(Map("name" -> "buzuli")).get("name").contains("buzuli"))
       }
       "return None when not found" in {
-        assert(ConfigSupplier.of(Map("nay" -> "buzuli")).get("name") == None)
+        assert(ConfigSupplier.of(Map("nay" -> "buzuli")).get("name").isEmpty)
+      }
+    }
+    "fetching string lists" should {
+      "return Some when at least one non-empty part is found" in {
+        assert(ConfigSupplier.of(Map("name" -> "buzuli")).getStrings("name").contains(List("buzuli")))
+        assert(ConfigSupplier.of(Map("name" -> ",buzuli")).getStrings("name").contains(List("buzuli")))
+        assert(ConfigSupplier.of(Map("name" -> "buzuli,")).getStrings("name").contains(List("buzuli")))
+        assert(ConfigSupplier.of(Map("name" -> ",buzuli")).getStrings("name").contains(List("buzuli")))
+        assert(ConfigSupplier.of(Map("name" -> " , buzuli , ")).getStrings("name").contains(List("buzuli")))
+        assert(ConfigSupplier.of(Map("name" -> " a ,b , c")).getStrings("name").contains(List("a", "b", "c")))
+      }
+      "return None when there wasn't there were no non-empty elements" in {
+        assert(ConfigSupplier.of(Map("nay" -> "buzuli")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> "")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> " ")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> " ,")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> ", ")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> " , ")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> ",")).getStrings("name").isEmpty)
+        assert(ConfigSupplier.of(Map("name" -> " ,  , ,  ")).getStrings("name").isEmpty)
       }
     }
     "fetching numeric values" should {
