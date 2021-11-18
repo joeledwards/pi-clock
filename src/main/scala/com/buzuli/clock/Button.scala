@@ -3,9 +3,15 @@ package com.buzuli.clock
 import com.pi4j.io.gpio._
 import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
 
+/**
+ *
+ *
+ * @param pin the pin
+ * @param normallyClosed
+ */
 class Button(
   val pin: Int,
-  val nc: Boolean
+  val normallyClosed: Boolean
 ) {
   type ButtonEventHandler = ButtonEvent => Unit
 
@@ -16,6 +22,7 @@ class Button(
   def onRelease(handler: ButtonEventHandler): Unit = addListener(ButtonReleaseListener(handler))
   def onEvent(handler: ButtonEventHandler): Unit = addListener(ButtonActionListener(handler))
 
+  /* Listen only once */
   def onePress(handler: ButtonEventHandler): Unit = addListener(ButtonPressListener(handler, true))
   def oneRelease(handler: ButtonEventHandler): Unit = addListener(ButtonReleaseListener(handler, true))
   def oneEvent(handler: ButtonEventHandler): Unit = addListener(ButtonActionListener(handler, true))
@@ -25,7 +32,7 @@ class Button(
   }
 
   private def pressed(): Unit = {
-    val event = ButtonPress(pin, !nc)
+    val event = ButtonPress(pin, !normallyClosed)
     listeners = listeners filter { _ match {
       case ButtonActionListener(handler, once) => {
         handler(event)
@@ -40,7 +47,7 @@ class Button(
   }
 
   private def released(): Unit = {
-    val event = ButtonRelease(pin, nc)
+    val event = ButtonRelease(pin, normallyClosed)
     listeners = listeners filter { _ match {
       case ButtonActionListener(handler, once) => {
         handler(event)
@@ -69,7 +76,7 @@ class Button(
                 return
               if (event.getEventType != PinEventType.DIGITAL_STATE_CHANGE)
                 return
-              (nc, gpio.map(_.getState(event.getPin))) match {
+              (normallyClosed, gpio.map(_.getState(event.getPin))) match {
                 // Normally Closed
                 case (true, Some(PinState.LOW)) => pressed()
                 case (true, Some(PinState.HIGH)) => released()
@@ -93,7 +100,7 @@ class Button(
 }
 
 object Button {
-  def create(pin: Int, nc: Boolean): Button = new Button(pin, nc)
+  def create(pin: Int, normallyClosed: Boolean): Button = new Button(pin, normallyClosed)
 }
 
 trait ButtonEventListener {

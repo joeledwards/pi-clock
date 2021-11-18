@@ -79,5 +79,82 @@ class TimeSpec extends UnitSpec {
         assert(Time.prettyDuration(2.day) == "2d 0h")
       }
     }
+
+    "parsing durations" should {
+      "parse a valid, single-component duration" in {
+        assert(Time.parseDuration("1").contains(1.second))
+        assert(Time.parseDuration("59").contains(59.seconds))
+        assert(Time.parseDuration("60").contains(1.minute))
+
+        assert(Time.parseDuration("1.0").contains(1.second))
+        assert(Time.parseDuration("1.2").contains(1200.milliseconds))
+
+        assert(Time.parseDuration("1ms").contains(1.millisecond))
+        assert(Time.parseDuration("999ms").contains(999.milliseconds))
+        assert(Time.parseDuration("1000ms").contains(1.second))
+
+        assert(Time.parseDuration("1s").contains(1.second))
+        assert(Time.parseDuration("59s").contains(59.seconds))
+        assert(Time.parseDuration("60s").contains(1.minute))
+
+        assert(Time.parseDuration("1m").contains(1.minute))
+
+        assert(Time.parseDuration("1h").contains(1.hour))
+        assert(Time.parseDuration("23h").contains(23.hours))
+        assert(Time.parseDuration("24h").contains(1.day))
+
+        assert(Time.parseDuration("0.5d").contains(12.hours))
+        assert(Time.parseDuration("1.75d").contains(42.hours))
+        assert(Time.parseDuration("1d").contains(1.day))
+        assert(Time.parseDuration("7d").contains(7.days))
+      }
+
+      "parse a valid, multi-component duration" in {
+        assert(Time.parseDuration("1m 1s").contains(61.seconds))
+        assert(Time.parseDuration("1h 1m").contains(61.minutes))
+        assert(Time.parseDuration("1d 1h").contains(25.hours))
+        assert(Time.parseDuration("1d 24h").contains(2.days))
+
+        assert(Time.parseDuration("0.5d 0.5h 0.5m").contains(45030.seconds))
+      }
+
+      "parse a peculiar (yet valid), multi-component duration" in {
+        assert(Time.parseDuration("30s 0.5m").contains(1.minute))
+        assert(Time.parseDuration("30s 1m").contains(90.seconds))
+        assert(Time.parseDuration("15m 45m").contains(1.hour))
+        assert(Time.parseDuration("15m 1h").contains(75.minutes))
+        assert(Time.parseDuration("2h 3h").contains(5.hours))
+        assert(Time.parseDuration("2h 2d").contains(50.hours))
+      }
+
+      "ignore extra whitespace" in {
+        assert(Time.parseDuration(" 1h ").contains(1.hour))
+        assert(Time.parseDuration(" 1h  1m ").contains(61.minutes))
+      }
+
+      "reject invalid durations" in {
+        assert(Time.parseDuration("").isEmpty)
+        assert(Time.parseDuration(".").isEmpty)
+        assert(Time.parseDuration("..").isEmpty)
+
+        assert(Time.parseDuration("ten hours.").isEmpty)
+        assert(Time.parseDuration("ten.hours.").isEmpty)
+
+        assert(Time.parseDuration("1sec").isEmpty)
+        assert(Time.parseDuration("1second").isEmpty)
+        assert(Time.parseDuration("2seconds").isEmpty)
+
+        assert(Time.parseDuration("1min").isEmpty)
+        assert(Time.parseDuration("1minute").isEmpty)
+        assert(Time.parseDuration("2minutes").isEmpty)
+
+        assert(Time.parseDuration("1hr").isEmpty)
+        assert(Time.parseDuration("1hour").isEmpty)
+        assert(Time.parseDuration("2hours").isEmpty)
+
+        assert(Time.parseDuration("1day").isEmpty)
+        assert(Time.parseDuration("2days").isEmpty)
+      }
+    }
   }
 }

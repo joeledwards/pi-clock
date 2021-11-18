@@ -4,14 +4,13 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import play.api.libs.json._
 import sttp.{client3 => http}
 import sttp.client3.{Response, SttpBackendOptions}
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.{Header, MediaType, Method, Uri}
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 sealed trait Validity[I, O]
