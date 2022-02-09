@@ -3,10 +3,10 @@ package com.buzuli.clock
 import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import com.buzuli.util.{Scheduled, Scheduler}
 
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 
 class Clock {
   type TickListener = (Instant) => Unit
@@ -16,12 +16,24 @@ class Clock {
   private val scheduler = new Scheduler
 
   def start(): Unit = {
-    if (!scheduled.isDefined) {
-      scheduled = Some(scheduler.runAt(Instant.now.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS)) {
-        scheduled = Some(scheduler.runEvery(Duration(1, TimeUnit.SECONDS)) {
-          notifyListeners()
-        })
-      })
+    if (scheduled.isEmpty) {
+      scheduled = Some(
+        scheduler.runAt(
+          Instant
+            .now
+            .plusSeconds(1)
+            .truncatedTo(ChronoUnit.SECONDS)
+        ) {
+          println("first tick")
+          scheduled = Some(
+            scheduler.runEvery(
+              Duration(1, TimeUnit.SECONDS)
+            ) {
+              notifyListeners()
+            }
+          )
+        }
+      )
     }
   }
 
@@ -35,7 +47,14 @@ class Clock {
   }
 
   private def notifyListeners(): Unit = {
-    listeners.foreach { _(Instant.now()) }
+    listeners.foreach { listener =>
+      Try {
+        listener (Instant.now())
+      } match {
+        case Success(_) =>
+        case Failure(error) => println(s"Error notifying clock listener: ${error}")
+      }
+    }
   }
 }
 

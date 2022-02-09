@@ -1,6 +1,6 @@
 package com.buzuli.util
 
-import java.time.Instant
+import java.time.{Instant, ZoneId, ZoneOffset, ZonedDateTime}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, DurationLong}
 import scala.util.Try
@@ -12,6 +12,14 @@ object Time {
   val NANOS_PER_MINUTE: Long = NANOS_PER_SECOND * 60L
   val NANOS_PER_HOUR: Long = NANOS_PER_MINUTE * 60L
   val NANOS_PER_DAY: Long = NANOS_PER_HOUR * 24L
+
+  def localDateTime(ts: Instant): ZonedDateTime = {
+    ZonedDateTime.ofInstant(ts, ZoneId.systemDefault)
+  }
+
+  def utcDateTime(ts: Instant): ZonedDateTime = {
+    ZonedDateTime.ofInstant(ts, ZoneOffset.UTC)
+  }
 
   def now(): Instant = Instant.now
   def since(whence: Instant): Duration = diff(whence, now)

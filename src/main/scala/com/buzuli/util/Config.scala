@@ -9,11 +9,12 @@ trait ConfigSupplier {
   def get(key: String): Option[String]
 
   def getAs[T](key: String)(convert: String => Option[T]): Option[T] = {
-    Try {
-      get(key) flatMap (convert(_))
-    } match {
-      case Success(v) => v
-      case Failure(e) => None
+    get(key) flatMap (convert(_))
+  }
+
+  def getListAs[T](key: String)(convert: String => Option[T]): Option[List[T]] = {
+    getStrings(key) map { list =>
+      list.flatMap(convert)
     }
   }
 
@@ -54,8 +55,8 @@ trait ConfigSupplier {
   }
 
   def getInt(key: String): Option[Int] = getAs(key) {
-    case v if v.startsWith("0x") => Option(Integer.parseInt(v.slice(2, v.length), 16))
-    case v => Option(Integer.parseInt(v))
+    case v if v.startsWith("0x") => Try(Integer.parseInt(v.slice(2, v.length), 16)).toOption
+    case v => Try(Integer.parseInt(v)).toOption
   }
 
   def getToggle(key: String): Option[Boolean] = getAs(key)(parseToggle)

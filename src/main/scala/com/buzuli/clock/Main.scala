@@ -1,8 +1,9 @@
 package com.buzuli.clock
 
-import java.time.ZoneId
+import java.time.{ZoneId, ZoneOffset}
+import com.buzuli.util.{Http, SysInfo, Time}
 
-import com.buzuli.util.{Http, SysInfo}
+import java.time.temporal.{ChronoField, TemporalField}
 
 object Main extends App {
   if (Config.checkIntegrity) {
@@ -19,6 +20,7 @@ object Main extends App {
     case ClockMode => Some(Clock.create())
     case _ => None
   }
+
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
     case (true, Some(pin)) => Some(Button.create(pin, Config.buttonNormallyClosed))
     case _ => None
@@ -84,10 +86,22 @@ object Main extends App {
             Nil
         }
         case Display16x2 => {
-          val utc = s"${timestamp.toString.slice(0, 16).replace('T', ' ')}"
-          val local = s"${timestamp.atZone(ZoneId.systemDefault).toString.slice(0, 16).replace('T', ' ')}"
+          val tsLocal = timestamp.atZone(ZoneId.systemDefault)
+          val tsUtc = timestamp.atZone(ZoneOffset.UTC)
+          val utc = s"${tsUtc.toString.slice(0, 16).replace('T', ' ')}"
+          val local = s"${tsLocal.toString.slice(0, 16).replace('T', ' ')}"
           val ip = SysInfo.ip.value.getOrElse("--")
           val host = SysInfo.host.value.getOrElse("--")
+
+          val utcHour = tsUtc.getHour
+          val utcMinute = tsUtc.getMinute
+          val utcBinaryHour = s"Z|H ${utcHour}%12b"
+          val utcBinaryMinute = s"Z|M ${utcMinute}%12b"
+
+          val localHour = tsLocal.getHour
+          val localMinute = tsLocal.getMinute
+          val localBinaryHour = s"L|H ${localHour.toBinaryString}%12b"
+          val localBinaryMinute = s"L|M ${localMinute.toBinaryString}%12b"
 
           displayContent match {
             case DisplayUtcAndHost => Some(utc) :: Some(host) :: Nil
@@ -96,6 +110,8 @@ object Main extends App {
             case DisplayLocalAndIp => Some(local) :: Some(ip) :: Nil
             case DisplayTimesUtcTop => Some(utc) :: Some(local) :: Nil
             case DisplayTimesLocalTop => Some(local) :: Some(utc) :: Nil
+            case DisplayBinaryTimeUtc => Some(utcBinaryHour) :: Some(utcBinaryMinute) :: Nil
+            case DisplayBinaryTimeLocal => Some(localBinaryHour) :: Some(localBinaryMinute) :: Nil
           }
         }
       }
@@ -110,10 +126,10 @@ object Main extends App {
     }
   }
 
-  button.map { btn =>
+  button.foreach { btn =>
     println("Initializing the button ...")
 
-    btn.onEvent { _ match {
+    btn.onEvent {
       case ButtonPress(_, _) => {
         displayContent = displayContent.next
         println("Button pressed.")
@@ -121,7 +137,7 @@ object Main extends App {
       case ButtonRelease(_, _) => {
         println("Button released.")
       }
-    } }
+    }
   }
 
   println("Running ...")
@@ -161,5 +177,11 @@ case object DisplayTimesUtcTop extends DisplayContent {
   override def next: DisplayContent = DisplayTimesLocalTop
 }
 case object DisplayTimesLocalTop extends DisplayContent {
+  override def next: DisplayContent = DisplayBinaryTimeUtc
+}
+case object DisplayBinaryTimeUtc extends DisplayContent {
+  override def next: DisplayContent = DisplayBinaryTimeLocal
+}
+case object DisplayBinaryTimeLocal extends DisplayContent {
   override def next: DisplayContent = DisplayUtcAndHost
 }
