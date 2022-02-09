@@ -1,9 +1,7 @@
 package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
-import com.buzuli.util.{Http, Strings, SysInfo, Time}
-
-import java.time.temporal.{ChronoField, TemporalField}
+import com.buzuli.util.{Http, Strings, SysInfo}
 
 object Main extends App {
   if (Config.checkIntegrity) {
@@ -11,8 +9,10 @@ object Main extends App {
     sys.exit(0)
   }
 
-  //private var displayContent: DisplayContent = DisplayUtcAndHost
-  private var displayContent: DisplayContent = DisplayBinaryTimeUtc
+  private var displayContent: DisplayContent = Config.binary match {
+    case true => DisplayBinaryTimeUtc
+    case false => DisplayUtcAndHost
+  }
 
   println(s"All Addresses:")
   println(SysInfo.addresses.value.map(_.mkString("\n")).getOrElse(""))
