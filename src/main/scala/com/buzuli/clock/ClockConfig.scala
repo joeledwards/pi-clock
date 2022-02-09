@@ -39,6 +39,7 @@ object Config {
   lazy val senseHatInstalled: Boolean = Env.getToggle("PI_CLOCK_SENSE_HAT_INSTALLED").getOrElse(false)
 
   lazy val humanFriendly: Boolean = Env.getToggle("PI_CLOCK_HUMAN_FRIENDLY").getOrElse(false)
+  lazy val binary: Boolean = Env.getToggle("PI_CLOCK_BINARY").getOrElse(false)
 
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
   lazy val displayDimensions: DisplayDimensions = {

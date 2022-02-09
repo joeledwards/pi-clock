@@ -1,7 +1,7 @@
 package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
-import com.buzuli.util.{Http, SysInfo, Time}
+import com.buzuli.util.{Http, Strings, SysInfo, Time}
 
 import java.time.temporal.{ChronoField, TemporalField}
 
@@ -11,7 +11,8 @@ object Main extends App {
     sys.exit(0)
   }
 
-  private var displayContent: DisplayContent = DisplayUtcAndHost
+  //private var displayContent: DisplayContent = DisplayUtcAndHost
+  private var displayContent: DisplayContent = DisplayBinaryTimeUtc
 
   println(s"All Addresses:")
   println(SysInfo.addresses.value.map(_.mkString("\n")).getOrElse(""))
@@ -58,25 +59,40 @@ object Main extends App {
     clk.onTick { timestamp =>
       val lines: List[Option[String]] = display.dimensions match {
         case Display20x4 => {
-          val utc = Config.humanFriendly match {
-            case true => s"${timestamp.toString.slice(0, 16).replace('T', ' ')} < Z"
-            case false => s"${timestamp.toString.slice(0, 19)}Z"
+          val tsLocal = timestamp.atZone(ZoneId.systemDefault)
+          val tsUtc = timestamp.atZone(ZoneOffset.UTC)
+
+          val utc = (Config.binary, Config.humanFriendly) match {
+            case (true, _) => {
+              val utcHour = Strings.padLeft('0', 5)(tsUtc.getHour.toBinaryString)
+              val utcMinute = Strings.padLeft('0', 6)(tsUtc.getMinute.toBinaryString)
+              val utcSecond = Strings.padLeft('0', 6)(tsUtc.getSecond.toBinaryString)
+              s"${utcHour}:${utcMinute}.${utcSecond}Z"
+            }
+            case (_, true) => s"${timestamp.toString.slice(0, 16).replace('T', ' ')} < Z"
+            case _ => s"${timestamp.toString.slice(0, 19)}Z"
           }
           val localTs = timestamp.atZone(ZoneId.systemDefault)
-          val local = Config.humanFriendly match {
-            case true => s"${localTs.toString.slice(0, 16).replace('T', ' ')} < L"
-            case false => s"${localTs.toString.slice(0, 19)}L"
+          val local = (Config.binary, Config.humanFriendly) match {
+            case (true, _) => {
+              val localHour = Strings.padLeft('0', 5)(tsLocal.getHour.toBinaryString)
+              val localMinute = Strings.padLeft('0', 6)(tsLocal.getMinute.toBinaryString)
+              val localSecond = Strings.padLeft('0', 6)(tsLocal.getSecond.toBinaryString)
+              s"${localHour}:${localMinute}.${localSecond}L"
+            }
+            case (_, true) => s"${localTs.toString.slice(0, 16).replace('T', ' ')} < L"
+            case _ => s"${localTs.toString.slice(0, 19)}L"
           }
 
           val host = SysInfo.host.value.getOrElse("--")
-          val ipStr = (Config.humanFriendly, SysInfo.ip.value.getOrElse("--")) match {
-            case (true, ip) => {
+          val ipStr = (Config.binary, Config.humanFriendly, SysInfo.ip.value.getOrElse("--")) match {
+            case (false, true, ip) => {
               val seconds = timestamp.toString.slice(17, 19)
               val padding = " " * 20
               val ipPadded = s"${ip}${padding}"
               s"${ipPadded.slice(0, 15)} | ${seconds}"
             }
-            case (false, ip) => ip
+            case (_, _, ip) => ip
           }
 
           Some(local) ::
@@ -93,15 +109,13 @@ object Main extends App {
           val ip = SysInfo.ip.value.getOrElse("--")
           val host = SysInfo.host.value.getOrElse("--")
 
-          val utcHour = tsUtc.getHour
-          val utcMinute = tsUtc.getMinute
-          val utcBinaryHour = s"Z|H ${utcHour}%12b"
-          val utcBinaryMinute = s"Z|M ${utcMinute}%12b"
+          val utcHour = Strings.padLeft('0', 5)(tsUtc.getHour.toBinaryString)
+          val utcMinute = Strings.padLeft('0', 6)(tsUtc.getMinute.toBinaryString)
+          val utcBinaryTime = s"${utcHour}:${utcMinute} > Z"
 
-          val localHour = tsLocal.getHour
-          val localMinute = tsLocal.getMinute
-          val localBinaryHour = s"L|H ${localHour.toBinaryString}%12b"
-          val localBinaryMinute = s"L|M ${localMinute.toBinaryString}%12b"
+          val localHour = Strings.padLeft('0', 5)(tsLocal.getHour.toBinaryString)
+          val localMinute = Strings.padLeft('0', 6)(tsLocal.getMinute.toBinaryString)
+          val localBinaryTime = s"${localHour}:${localMinute} > L"
 
           displayContent match {
             case DisplayUtcAndHost => Some(utc) :: Some(host) :: Nil
@@ -110,8 +124,8 @@ object Main extends App {
             case DisplayLocalAndIp => Some(local) :: Some(ip) :: Nil
             case DisplayTimesUtcTop => Some(utc) :: Some(local) :: Nil
             case DisplayTimesLocalTop => Some(local) :: Some(utc) :: Nil
-            case DisplayBinaryTimeUtc => Some(utcBinaryHour) :: Some(utcBinaryMinute) :: Nil
-            case DisplayBinaryTimeLocal => Some(localBinaryHour) :: Some(localBinaryMinute) :: Nil
+            case DisplayBinaryTimeUtc => Some(utcBinaryTime) :: Some(ip) :: Nil
+            case DisplayBinaryTimeLocal => Some(localBinaryTime) :: Some(ip) :: Nil
           }
         }
       }

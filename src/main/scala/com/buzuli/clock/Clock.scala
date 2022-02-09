@@ -24,7 +24,6 @@ class Clock {
             .plusSeconds(1)
             .truncatedTo(ChronoUnit.SECONDS)
         ) {
-          println("first tick")
           scheduled = Some(
             scheduler.runEvery(
               Duration(1, TimeUnit.SECONDS)
