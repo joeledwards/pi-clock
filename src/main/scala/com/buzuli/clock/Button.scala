@@ -3,6 +3,8 @@ package com.buzuli.clock
 import com.pi4j.io.gpio._
 import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
 
+import scala.util.{Failure, Success, Try}
+
 /**
  *
  *
@@ -23,23 +25,32 @@ class Button(
   def onEvent(handler: ButtonEventHandler): Unit = addListener(ButtonActionListener(handler))
 
   /* Listen only once */
-  def onePress(handler: ButtonEventHandler): Unit = addListener(ButtonPressListener(handler, true))
-  def oneRelease(handler: ButtonEventHandler): Unit = addListener(ButtonReleaseListener(handler, true))
-  def oneEvent(handler: ButtonEventHandler): Unit = addListener(ButtonActionListener(handler, true))
+  def onePress(handler: ButtonEventHandler): Unit = addListener(ButtonPressListener(handler, once = true))
+  def oneRelease(handler: ButtonEventHandler): Unit = addListener(ButtonReleaseListener(handler, once = true))
+  def oneEvent(handler: ButtonEventHandler): Unit = addListener(ButtonActionListener(handler, once = true))
 
   private def addListener(listener: ButtonEventListener): Unit = {
     listeners = listener :: listeners
+  }
+
+  private def handleWith(handler: ButtonEventHandler)(event: ButtonEvent): Unit = {
+    Try {
+      handler(event)
+    } match {
+      case Success(_) =>
+      case Failure(error) => println(s"Error handling button event.\nEvent: ${event}\nError: ${error}")
+    }
   }
 
   private def pressed(): Unit = {
     val event = ButtonPress(pin, !normallyClosed)
     listeners = listeners filter { _ match {
       case ButtonActionListener(handler, once) => {
-        handler(event)
+        handleWith(handler)(event)
         !once
       }
       case ButtonPressListener(handler, once) => {
-        handler(event)
+        handleWith(handler)(event)
         !once
       }
       case _ => true
@@ -50,11 +61,11 @@ class Button(
     val event = ButtonRelease(pin, normallyClosed)
     listeners = listeners filter { _ match {
       case ButtonActionListener(handler, once) => {
-        handler(event)
+        handleWith(handler)(event)
         !once
       }
       case ButtonReleaseListener(handler, once) => {
-        handler(event)
+        handleWith(handler)(event)
         !once
       }
       case _ => true
