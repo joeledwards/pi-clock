@@ -1,8 +1,5 @@
 package com.buzuli.clock
 
-import java.util.concurrent.TimeUnit
-
-import scala.util.{Failure, Success, Try}
 import com.buzuli.util.Env
 
 import scala.concurrent.duration._

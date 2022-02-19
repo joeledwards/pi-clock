@@ -2,7 +2,7 @@ package com.buzuli.util
 
 import java.time.{Instant, ZoneId, ZoneOffset, ZonedDateTime}
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.{Duration, DurationLong}
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 object Time {

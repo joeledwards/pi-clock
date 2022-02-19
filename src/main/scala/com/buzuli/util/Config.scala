@@ -1,7 +1,5 @@
 package com.buzuli.util
 
-import java.util.concurrent.TimeUnit
-
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 

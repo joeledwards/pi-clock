@@ -1,6 +1,10 @@
 package com.buzuli.clock
 
-import com.buzuli.util.{Http, HttpBodyJson, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse}
+import com.buzuli.util.{
+  Http, HttpBodyJson, HttpResultRawResponse,
+  HttpResultInvalidBody, HttpResultInvalidHeader,
+  HttpResultInvalidMethod, HttpResultInvalidUrl
+}
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
