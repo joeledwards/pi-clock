@@ -5,13 +5,15 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import play.api.libs.json._
-import sttp.{client3 => http}
-import sttp.client3.{Response, SttpBackendOptions}
+import sttp.capabilities.akka.AkkaStreams
+import sttp.{capabilities, client3 => http}
+import sttp.client3.{Response, SttpBackend, SttpBackendOptions}
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.{Header, MediaType, Method, Uri}
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 sealed trait Validity[I, O]
 case class Valid[I, O](value: O) extends Validity[I, O]
@@ -41,9 +43,9 @@ case class HttpResultInvalidUrl(url: String) extends HttpResult
 case class HttpResultInvalidHeader(name: String, value: String) extends HttpResult
 case class HttpResultInvalidBody() extends HttpResult
 case class HttpResultRawResponse(
-    rawResponse: Response[Either[String, String]],
-    data: Option[HttpBody] = None,
-    elapsed: Option[Duration] = None
+  rawResponse: Response[Either[String, String]],
+  data: Option[HttpBody] = None,
+  elapsed: Option[Duration] = None
 ) extends HttpResult {
   override def response: Some[Response[Either[String, String]]] = Some(rawResponse)
   override def status: Option[Int] = response.map(_.code.code)
@@ -53,8 +55,8 @@ case class HttpResultRawResponse(
 
 object Http {
   implicit val system: ActorSystem = ActorSystem("pi-clock")
-  implicit val httpOptions = SttpBackendOptions.connectionTimeout(5.seconds)
-  implicit val httpBackend = AkkaHttpBackend(httpOptions)
+  implicit val httpOptions: SttpBackendOptions = SttpBackendOptions.connectionTimeout(5.seconds)
+  implicit val httpBackend: SttpBackend[Future, AkkaStreams with capabilities.WebSockets] = AkkaHttpBackend(httpOptions)
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   object method {
@@ -111,7 +113,6 @@ object Http {
         }
 
         httpBackend.send(httpRequest) map { response =>
-          val statusCode = response.code.code
           val elapsed = Some(Time.diff(start, Instant.now))
           val data = response.body match {
             case Left(errorMessage) => HttpBodyText(errorMessage)
@@ -125,8 +126,8 @@ object Http {
           HttpResultRawResponse(response, Some(data), elapsed)
         }
       }
-      case (_, _, _) => {
-        throw new Exception("Uncategorized, invalid HTTP configuration.")
+      case (u, m, h) => {
+        throw new Exception(s"Uncategorized, invalid HTTP configuration.\nMethod => ${m}\nURL => ${u}\nHeaders => ${h}")
       }
     }
   }
@@ -171,8 +172,8 @@ object Http {
   private def validateHeaders(
     headers: List[(String, String)]
   ): Validity[List[(String, String)], List[Header]] = {
-    val (invalids, valids) = headers map {
-      validateHeader(_)
+    val (valids, invalids) = headers map {
+      validateHeader
     } partition {
       case Valid(_) => true
       case Invalid(_, _) => false
@@ -198,15 +199,64 @@ object Http {
 }
 
 object TryHttp extends App {
-  val result = Await.result(Http.get("http://rocket:1337/"), Duration(5, TimeUnit.SECONDS))
+  val method = "GET"
+  val url = "http://rocket:1337/question?name=bob"
+  val headers: List[(String, String)] = List("x-note" -> "test")
+  val timeout = Duration(5, TimeUnit.SECONDS)
 
-  result match {
-    case HttpResultRawResponse(response, _, _) => {
-      val json = Json.obj(
-        "status" -> response.code.code,
-        "headers" -> Json.arr(response.headers.map(h =>
-          h.name -> h.value
-        ))
+  Try {
+    Await.result(
+      Http.rq(method = method, url = url, headers = headers, timeout = timeout),
+      Duration(5, TimeUnit.SECONDS)
+    )
+  } match {
+    case Failure(error) => {
+      println("Error in HTTP request.")
+      error.printStackTrace()
+    }
+    case Success(rsp@HttpResultRawResponse(response, body, elapsed)) => {
+      val json = JsObject(
+        Seq(
+          "timeout" -> JsString(timeout.toString),
+          "elapsed" -> elapsed.map(e => JsString(e.toString)).getOrElse(JsNull),
+          "request" -> JsObject(
+            Seq(
+              "method" -> JsString(method),
+              "url" -> JsString(url),
+              "headers" -> JsObject(
+                headers.map(e => (e._1, JsString(e._2)))
+              )
+            )
+          ),
+          "response" -> JsObject(
+            Seq(
+              "status" -> rsp.status.map(sc => JsNumber(sc)).getOrElse(JsNull),
+              "headers" -> JsObject(
+                response.headers.map(h => h.name -> JsString(h.value))
+              ),
+              "body" -> (body match {
+                case None => JsNull
+                case Some(HttpBodyJson(json)) => json
+                case Some(HttpBodyBytes(bytes)) => {
+                  Try {
+                    Json.parse(bytes)
+                  } match {
+                    case Success(json) => json
+                    case Failure(_) => JsString(new String(bytes))
+                  }
+                }
+                case Some(HttpBodyText(text)) => {
+                  Try {
+                    Json.parse(text)
+                  } match {
+                    case Success(json) => json
+                    case Failure(_) => JsString(text)
+                  }
+                }
+              })
+            )
+          )
+        )
       )
       println(Json.prettyPrint(json))
     }

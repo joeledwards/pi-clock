@@ -21,7 +21,7 @@ object Time {
     ZonedDateTime.ofInstant(ts, ZoneOffset.UTC)
   }
 
-  def now(): Instant = Instant.now
+  def now: Instant = Instant.now
   def since(whence: Instant): Duration = diff(whence, now)
   def diff(start: Instant, end: Instant): Duration = {
     Duration(

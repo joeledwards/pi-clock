@@ -5,7 +5,7 @@ import java.time.Instant
 import scala.concurrent.duration.Duration
 
 /**
- * Koozie is a cache which may be refreshed at an interval.
+ * Koozie is a single-value cache which may be refreshed at an interval.
  * A synchronous implementation will refresh when the resource
  * is requested. An asynchronous version will refresh in the background.
  */
