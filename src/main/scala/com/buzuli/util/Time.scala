@@ -1,11 +1,16 @@
 package com.buzuli.util
 
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZoneOffset, ZonedDateTime}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
 object Time {
+  val ISO_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+  val ISO_FORMAT_WITH_TZ: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+  val ZONE_UTC: ZoneId = ZoneId.of("UTC")
+
   val NANOS_PER_MICRO: Long = 1000L
   val NANOS_PER_MILLI: Long = NANOS_PER_MICRO * 1000L
   val NANOS_PER_SECOND: Long = NANOS_PER_MILLI * 1000L
@@ -22,6 +27,13 @@ object Time {
   }
 
   def now: Instant = Instant.now
+
+  def toIso(ts: ZonedDateTime): String = ts.toInstant.atZone(ZONE_UTC).format(ISO_FORMAT)
+  def toIsoWithTz(ts: ZonedDateTime): String = ts.format(ISO_FORMAT)
+
+  def nowUtcIso: String = toIso(utcDateTime(now))
+  def nowLocalIso: String = toIso(localDateTime(now))
+
   def since(whence: Instant): Duration = diff(whence, now)
   def diff(start: Instant, end: Instant): Duration = {
     Duration(

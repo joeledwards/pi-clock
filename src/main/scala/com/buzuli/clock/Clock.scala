@@ -3,19 +3,19 @@ package com.buzuli.clock
 import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import com.buzuli.util.{Scheduled, Scheduler}
+import com.buzuli.util.{Scheduled, Scheduler, Time}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 class Clock {
-  type TickListener = (Instant) => Unit
+  type TickListener = Instant => Unit
 
   private var scheduled: Option[Scheduled] = None
   private var listeners: List[TickListener] = Nil
   private val scheduler = new Scheduler
 
-  def start(): Unit = {
+  def start(): Unit = this.synchronized {
     if (scheduled.isEmpty) {
       scheduled = Some(
         scheduler.runAt(
@@ -24,10 +24,14 @@ class Clock {
             .plusSeconds(1)
             .truncatedTo(ChronoUnit.SECONDS)
         ) {
+          println("Starting clock schedule (1-second ticks).")
           scheduled = Some(
             scheduler.runEvery(
               Duration(1, TimeUnit.SECONDS)
             ) {
+              if (Config.logOutput) {
+                println(s"Clock tick @ ${Time.nowUtcIso}")
+              }
               notifyListeners()
             }
           )
@@ -36,7 +40,7 @@ class Clock {
     }
   }
 
-  def stop(): Unit = {
+  def stop(): Unit = this.synchronized {
     scheduled foreach { _.cancel() }
     scheduled = None
   }
@@ -48,7 +52,7 @@ class Clock {
   private def notifyListeners(): Unit = {
     listeners.foreach { listener =>
       Try {
-        listener (Instant.now())
+        listener(Instant.now)
       } match {
         case Success(_) =>
         case Failure(error) => println(s"Error notifying clock listener: ${error}")

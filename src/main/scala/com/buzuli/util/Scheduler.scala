@@ -14,7 +14,7 @@ object Scheduled {
 }
 
 class Scheduler {
-  val executor = new ScheduledThreadPoolExecutor(1)
+  val executor = new ScheduledThreadPoolExecutor(2)
 
   def runnable(task: => Unit): Runnable = () => task
 

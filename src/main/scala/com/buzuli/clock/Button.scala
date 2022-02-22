@@ -72,39 +72,56 @@ class Button(
     } }
   }
 
-  def start(): Unit = {
-    gpio match {
-      case Some(_) =>
-      case None => {
-        gpio = Some(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
-        val gpioPin: Pin = RaspiPin.getPinByAddress(pin)
+  def start(): Unit = this.synchronized {
+    Try {
+      gpio match {
+        case Some(_) =>
+        case None => {
+          gpio = Some(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
+          val gpioPin: Pin = RaspiPin.getPinByAddress(pin)
 
-        gpio.foreach { g =>
-          g.`export`(gpioPin, PinMode.DIGITAL_INPUT)
-          g.addListener(gpioPin, new PinListener {
-            override def handlePinEvent(event: PinEvent): Unit = {
-              if (pin != event.getPin.getAddress)
-                return
-              if (event.getEventType != PinEventType.DIGITAL_STATE_CHANGE)
-                return
-              (normallyClosed, gpio.map(_.getState(event.getPin))) match {
-                // Normally Closed
-                case (true, Some(PinState.LOW)) => pressed()
-                case (true, Some(PinState.HIGH)) => released()
-                // Normally Open
-                case (false, Some(PinState.HIGH)) => pressed()
-                case (false, Some(PinState.LOW)) => released()
-                // No pin configured
-                case (_, None) =>
+          gpio.foreach { g =>
+            g.`export`(gpioPin, PinMode.DIGITAL_INPUT)
+            g.addListener(
+              gpioPin, new PinListener {
+                override def handlePinEvent(event: PinEvent): Unit = {
+                  Try {
+                    if (pin != event.getPin.getAddress)
+                      return
+                    if (event.getEventType != PinEventType.DIGITAL_STATE_CHANGE)
+                      return
+                    (normallyClosed, gpio.map(_.getState(event.getPin))) match {
+                      // Normally Closed
+                      case (true, Some(PinState.LOW)) => pressed()
+                      case (true, Some(PinState.HIGH)) => released()
+                      // Normally Open
+                      case (false, Some(PinState.HIGH)) => pressed()
+                      case (false, Some(PinState.LOW)) => released()
+                      // No pin configured
+                      case (_, None) =>
+                    }
+                  } match {
+                    case Failure(error) => {
+                      println(s"Error routing button pin event: ${error}")
+                      error.printStackTrace()
+                    }
+                  }
+                }
               }
-            }
-          })
+            )
+          }
         }
+      }
+    } match {
+      case Success(_) => println("GPIO initialization completed for button.")
+      case Failure(error) => {
+        println(s"Error initializing GPIO for button: ${error}")
+        error.printStackTrace()
       }
     }
   }
 
-  def stop(): Unit = {
+  def stop(): Unit = this.synchronized {
     gpio foreach { _.removeAllListeners() }
     gpio = None
   }
