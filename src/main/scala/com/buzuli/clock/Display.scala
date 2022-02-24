@@ -158,7 +158,9 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
   def update(lines: List[Option[String]]): Unit = Future {
     Try {
       computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
-        logger.debug(s"(${row}, ${col}) => '${char}'")
+        if (Config.logOutput) {
+          logger.debug(s"Updating character: (${row}, ${col}) => '${char}'")
+        }
         setCursor(row, col)
         printIIC(char)
       }

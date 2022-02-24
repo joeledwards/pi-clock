@@ -34,6 +34,7 @@ class Button(
 
   private def handleWith(handler: ButtonEventHandler)(event: ButtonEvent): Unit = {
     Try {
+      logger.debug(s"Button event => ${event}")
       handler(event)
     } match {
       case Success(_) =>
@@ -80,7 +81,16 @@ class Button(
           val gpioPin: Pin = RaspiPin.getPinByAddress(pin)
 
           gpio.foreach { g =>
+            logger.info(s"Exporting pin ${pin} for digital input")
             g.`export`(gpioPin, PinMode.DIGITAL_INPUT)
+
+            val initialState = g.getState(gpioPin)
+            logger.info(s"Initial state for pin ${pin} is ${initialState.getValue} (${initialState.getName})")
+
+            val pinMode = g.getMode(gpioPin)
+            logger.info(s"Mode for pin ${pin} is ${pinMode.getValue} (${pinMode.getName})")
+
+            logger.info(s"Adding listener for pin ${pin}")
             g.addListener(
               gpioPin, new PinListener {
                 override def handlePinEvent(event: PinEvent): Unit = {
@@ -111,7 +121,7 @@ class Button(
         }
       }
     } match {
-      case Success(_) => logger.info("GPIO initialization completed for button.")
+      case Success(_) => logger.info(s"GPIO initialization completed for button on pin ${pin}.")
       case Failure(error) => {
         logger.error("Error initializing GPIO for button", error)
       }
