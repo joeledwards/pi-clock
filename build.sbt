@@ -36,6 +36,11 @@ libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
 // https://mvnrepository.com/artifact/com.typesafe.play/play-json
 libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.0"
 
+// https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
+
+// https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
 
 // Helpful when testing (recommended by scalatest)
 logBuffered in Test := false

@@ -1,13 +1,9 @@
 package com.buzuli.clock
 
 import java.time.Instant
-
-import com.buzuli.util.{
-  Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader,
-  HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse,
-  Scheduled, Scheduler, Time
-}
+import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -19,7 +15,7 @@ case class InternetServiceOutage(service: String) extends Outage
 case object LocalNetworkOutage extends Outage
 case class LocalServiceOutage(service: String) extends Outage
 
-class InternetHealth {
+class InternetHealth extends LazyLogging {
   private implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val scheduler: Scheduler = Scheduler.create()
   private var scheduled: Option[Scheduled] = None
@@ -34,11 +30,11 @@ class InternetHealth {
   private val gpioPin: Option[Pin] = Config.internetPowerPin flatMap { pinAddress =>
     Option(RaspiPin.getPinByAddress(pinAddress)) match {
       case None => {
-        println(s"No valid reset pin supplied: ${pinAddress}")
+        logger.info(s"No valid reset pin supplied: ${pinAddress}")
         None
       }
       case Some(pin) => {
-        println(s"Initializing the Internet reset pin: ${pin}")
+        logger.info(s"Initializing the Internet reset pin: ${pin}")
         Scheduler.default.runAfter(1.second) {
           // This must be run after gpioPin has been assigned a value
           gpio.foreach { g =>
@@ -56,22 +52,23 @@ class InternetHealth {
   }
 
   def setHigh(): Unit = gpioPin foreach { pin =>
-    try {
+    Try {
       gpio.foreach { _.setState(pin, PinState.HIGH) }
-    } catch {
-      case e: Exception =>
-        println(s"Error pulling pin ${pin} high")
-        e.printStackTrace()
+    } match {
+      case Success(_) =>
+      case Failure(error) => {
+        logger.error(s"Error pulling pin ${pin} high", error)
+      }
     }
   }
 
   def setLow(): Unit = gpioPin foreach { pin =>
-    try {
+    Try {
       gpio.foreach { _.setState(pin, PinState.LOW) }
-    } catch {
-      case e: Exception =>
-        println(s"Error pulling pin ${pin} low")
-        e.printStackTrace()
+    } match {
+      case Success(_) =>
+      case Failure(error) =>
+        logger.error(s"Error pulling pin ${pin} low", error)
     }
   }
 
@@ -89,21 +86,21 @@ class InternetHealth {
     gpioPin.foreach { _ =>
       lastReset = Some(Time.now)
 
-      println("Cutting Internet power ...")
+      logger.info("Cutting Internet power ...")
       powerOff()
-      println("Power is off.")
+      logger.info("Power is off.")
 
       Scheduler.default.runAfter(1.second) {
-        println("Restoring Internet power ...")
+        logger.info("Restoring Internet power ...")
         powerOn()
-        println("Power is on.")
+        logger.info("Power is on.")
       }
     }
   }
 
   def start(): Unit = {
     if (scheduled.isEmpty) {
-      println("Scheduling regular Internet health checks ...")
+      logger.info("Scheduling regular Internet health checks ...")
 
       scheduled = Some(
         scheduler.runEvery(
@@ -114,14 +111,13 @@ class InternetHealth {
             Await.result(checkHealth(), Config.internetCheckInterval * 0.75)
           } match {
             case Failure(error) => {
-              println(s"Error in the Internet health-check system: ${error}")
-              error.printStackTrace()
+              logger.error(s"Error in the Internet health-check system", error)
             }
-            case Success(Some(LocalNetworkOutage)) => println("No local network connectivity.")
+            case Success(Some(LocalNetworkOutage)) => logger.warn("No local network connectivity.")
             case Success(Some(InternetOutage)) => {
               offlineSince = offlineSince match {
                 case Some(whence) => {
-                  println(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
+                  logger.warn(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
                   val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
                   val sufficientResetDelay = lastReset match {
                     case None => true
@@ -131,13 +127,13 @@ class InternetHealth {
                   if (sufficientOfflineDuration && sufficientResetDelay) {
                     // Only rest if we have been offline for 5 minutes and
                     // we haven't attempted a reset in the last 5 minutes.
-                    println("Internet reset needed.")
+                    logger.info("Internet reset needed.")
                     resetInternet()
                   }
                   Some(whence)
                 }
                 case None => {
-                  println(s"Internet connectivity lost.")
+                  logger.warn(s"Internet connectivity lost.")
                   Some(Instant.now)
                 }
               }
@@ -149,15 +145,15 @@ class InternetHealth {
                   val elapsed = Duration.fromNanos(
                     java.time.Duration.between(whence, Instant.now).toNanos
                   )
-                  println(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
+                  logger.info(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
                   Notify.slack(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}")
                   offlineSince = None
                 }
               }
               otherOutage match {
-                case None => println("Internet and local network are healthy.")
-                case Some(LocalServiceOutage(service)) => println(s"Local service '${service}' is unavailable")
-                case Some(InternetServiceOutage(service)) => println(s"Internet service '${service}' is unavailable.")
+                case None => logger.info("Internet and local network are healthy.")
+                case Some(LocalServiceOutage(service)) => logger.warn(s"Local service '${service}' is unavailable")
+                case Some(InternetServiceOutage(service)) => logger.warn(s"Internet service '${service}' is unavailable.")
                 case Some(InternetOutage) => // Handled above
                 case Some(LocalNetworkOutage) => // Handled above
               }
@@ -169,7 +165,7 @@ class InternetHealth {
   }
 
   def shutdown(): Unit = {
-    println("Halting Internet health checks ...")
+    logger.info("Halting Internet health checks ...")
 
     scheduled.foreach(_.cancel(true))
     scheduled = None
@@ -230,27 +226,26 @@ class InternetHealth {
 
   def handleRequestResult(service: String)(result: Try[HttpResult]): Unit = result match {
     case Failure(error) => {
-      println(s"Error contacting $service: $error")
-      error.printStackTrace()
+      logger.error(s"Error contacting $service", error)
     }
     case Success(HttpResultInvalidMethod(method)) => {
-      println(s"""Invalid method "$method" while checking service $service""")
+      logger.warn(s"""Invalid method "$method" while checking service $service""")
     }
     case Success(HttpResultInvalidUrl(url)) => {
-      println(s"""Invalid URL "$url" while checking service $service""")
+      logger.warn(s"""Invalid URL "$url" while checking service $service""")
     }
     case Success(HttpResultInvalidHeader(name, value)) => {
-      println(s"""Invalid header "$name=$value" while checking service $service""")
+      logger.warn(s"""Invalid header "$name=$value" while checking service $service""")
     }
     case Success(HttpResultInvalidBody()) => {
-      println(s"""Invalid message body while checking service $service""")
+      logger.warn(s"""Invalid message body while checking service $service""")
     }
     case Success(HttpResultRawResponse(response, _, duration)) => {
       val durationString = duration match {
         case Some(elapsed) => s" (took ${Time.prettyDuration(elapsed)})"
         case None => ""
       }
-      println(s"""Status ${response.code.code} from service ${service}${durationString}""")
+      logger.info(s"""Status ${response.code.code} from service ${service}${durationString}""")
     }
   }
 }

@@ -1,5 +1,7 @@
 package com.buzuli.util
 
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -70,10 +72,10 @@ object ConfigSupplier {
   def of(map: Map[String, String]): ConfigSupplier = new MapConfigSupplier(map)
 }
 
-object Env extends ConfigSupplier {
+object Env extends ConfigSupplier with LazyLogging {
   def get(key: String): Option[String] = Try {
     val value = Option(System.getenv(key))
-    println(s"Env: ${key} => ${value}")
+    logger.debug(s"Env: ${key} => ${value}")
     value
   } match {
     case Failure(_) => None

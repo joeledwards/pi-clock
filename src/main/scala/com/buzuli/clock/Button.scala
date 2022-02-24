@@ -2,19 +2,18 @@ package com.buzuli.clock
 
 import com.pi4j.io.gpio._
 import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.{Failure, Success, Try}
 
 /**
- *
- *
- * @param pin the pin
- * @param normallyClosed
+ * @param pin the pin on which to listen for button presses
+ * @param normallyClosed indicates whether
  */
 class Button(
   val pin: Int,
   val normallyClosed: Boolean
-) {
+) extends LazyLogging {
   type ButtonEventHandler = ButtonEvent => Unit
 
   private var listeners: List[ButtonEventListener] = Nil
@@ -38,7 +37,7 @@ class Button(
       handler(event)
     } match {
       case Success(_) =>
-      case Failure(error) => println(s"Error handling button event.\nEvent: ${event}\nError: ${error}")
+      case Failure(error) => logger.error(s"Error handling button event.\nEvent: ${event}\nError: ${error}", error)
     }
   }
 
@@ -102,8 +101,7 @@ class Button(
                     }
                   } match {
                     case Failure(error) => {
-                      println(s"Error routing button pin event: ${error}")
-                      error.printStackTrace()
+                      logger.error("Error routing button pin event", error)
                     }
                   }
                 }
@@ -113,10 +111,9 @@ class Button(
         }
       }
     } match {
-      case Success(_) => println("GPIO initialization completed for button.")
+      case Success(_) => logger.info("GPIO initialization completed for button.")
       case Failure(error) => {
-        println(s"Error initializing GPIO for button: ${error}")
-        error.printStackTrace()
+        logger.error("Error initializing GPIO for button", error)
       }
     }
   }

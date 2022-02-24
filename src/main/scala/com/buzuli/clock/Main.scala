@@ -2,8 +2,9 @@ package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Strings, SysInfo}
+import com.typesafe.scalalogging.LazyLogging
 
-object Main extends App {
+object Main extends App with LazyLogging {
   if (Config.checkIntegrity) {
     println("Passed integrity check.")
     sys.exit(0)
@@ -14,8 +15,8 @@ object Main extends App {
     case false => DisplayUtcAndHost
   }
 
-  println(s"All Addresses:")
-  println(SysInfo.addresses.value.map(_.mkString("\n")).getOrElse(""))
+  val addressStr = SysInfo.addresses.value.map(_.mkString("\n")).getOrElse("")
+  logger.info(s"All Addresses:\n${addressStr}")
 
   val clock: Option[Clock] = Config.runMode match {
     case ClockMode => Some(Clock.create())
@@ -34,13 +35,12 @@ object Main extends App {
 
   Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler {
     override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
-      println("Encountered un-caught exception!")
-      throwable.printStackTrace()
+      logger.error("Encountered un-caught exception!", throwable)
     }
   })
 
   sys.addShutdownHook {
-    println("Shutting down ...")
+    logger.info("Shutting down ...")
     clock.foreach(_.stop())
     button.foreach(_.stop())
     checkInternet.foreach(_.shutdown())
@@ -49,13 +49,13 @@ object Main extends App {
   }
 
   if (Config.displayEnabled) {
-    println("Initializing the display ...")
+    logger.info("Initializing the display ...")
     display.init()
   }
 
   // Configure display output on each tick of the clock
   clock.foreach { clk =>
-    println("Initializing the clock ...")
+    logger.info("Initializing the clock ...")
 
     clk.onTick { timestamp =>
       val lines: List[Option[String]] = display.dimensions match {
@@ -145,33 +145,36 @@ object Main extends App {
   }
 
   button.foreach { btn =>
-    println("Initializing the button ...")
+    logger.info("Initializing the button ...")
 
     btn.onEvent {
       case ButtonPress(_, _) => {
         displayContent = displayContent.next
-        println("Button pressed.")
+        logger.debug("Button pressed.")
       }
       case ButtonRelease(_, _) => {
-        println("Button released.")
+        logger.debug("Button released.")
       }
     }
   }
 
-  println("Running ...")
+  logger.info("Running ...")
 
   clock.foreach(_.start())
   button.foreach(_.start())
   checkInternet.foreach(_.start())
 
   def logLines(lines: List[Option[String]]): Unit = {
-    println(s"┌${"─" * display.dimensions.columns}┐")
-    lines
-      .map(_.getOrElse(""))
-      .map(_.take(display.dimensions.columns))
-      .map(_.padTo(display.dimensions.columns, ' '))
-      .foreach { line => println(s"│${line}│") }
-    println(s"└${"─" * display.dimensions.columns}┘")
+    val header = List(s"┌${"─" * display.dimensions.columns}┐")
+    val footer = List(s"└${"─" * display.dimensions.columns}┘")
+    val content = lines
+        .map(_.getOrElse(""))
+        .map(_.take(display.dimensions.columns))
+        .map(_.padTo(display.dimensions.columns, ' '))
+        .map(line => s"│${line}│")
+    val displayText = header ::: content ::: footer
+
+    logger.info(s"Display:\n${displayText.mkString("\n")}")
   }
 }
 

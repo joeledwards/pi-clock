@@ -1,13 +1,14 @@
 package com.buzuli.util
 
-import java.net.{Inet6Address, InetAddress, NetworkInterface}
+import com.typesafe.scalalogging.LazyLogging
 
+import java.net.{Inet6Address, InetAddress, NetworkInterface}
 import scala.concurrent.duration.Duration
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 import scala.jdk.CollectionConverters._
 
-object SysInfo {
+object SysInfo extends LazyLogging {
   val host: Koozie[String] = Koozie.sync(
     Some(InetAddress.getLocalHost.getHostName),
     Some(Duration(1, "minute"))
@@ -35,8 +36,7 @@ object SysInfo {
       } match {
         case Success(addrs) => Some(addrs)
         case Failure(error) => {
-          println(s"Error fetching IP address(es): ${error.getMessage}")
-          //error.printStackTrace()
+          logger.error("Error fetching IP address(es)", error)
           None
         }
       }
@@ -60,8 +60,7 @@ object SysInfo {
   } match {
     case Success(lines) => Some(lines)
     case Failure(error) => {
-      println(s"Error reading file ${path}: ${error.getMessage}")
-      //error.printStackTrace()
+      logger.error(s"Error reading file ${path}", error)
       None
     }
   }

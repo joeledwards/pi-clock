@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.{capabilities, client3 => http}
@@ -198,7 +199,7 @@ object Http {
   }
 }
 
-object TryHttp extends App {
+object TryHttp extends App with LazyLogging {
   val method = "GET"
   val url = "http://rocket:1337/question?name=bob"
   val headers: List[(String, String)] = List("x-note" -> "test")
@@ -211,8 +212,7 @@ object TryHttp extends App {
     )
   } match {
     case Failure(error) => {
-      println("Error in HTTP request.")
-      error.printStackTrace()
+      logger.error("Error in HTTP request.", error)
     }
     case Success(rsp@HttpResultRawResponse(response, body, elapsed)) => {
       val json = JsObject(
@@ -258,9 +258,9 @@ object TryHttp extends App {
           )
         )
       )
-      println(Json.prettyPrint(json))
+      logger.info(s"JSON Payload:\n${Json.prettyPrint(json)}")
     }
-    case _ => println(s"Invalid request!")
+    case _ => logger.warn(s"Invalid request!")
   }
 
   Http.shutdown()

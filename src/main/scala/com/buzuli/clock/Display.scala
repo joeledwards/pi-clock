@@ -1,12 +1,13 @@
 package com.buzuli.clock
 
 import com.pi4j.wiringpi.I2C
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
 
-class Display(val dimensions: DisplayDimensions) {
+class Display(val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   // commands
@@ -79,10 +80,10 @@ class Display(val dimensions: DisplayDimensions) {
 
     fd match {
       case None => {
-        println(s"Setup failed for address ${Config.i2cAddress}")
+        logger.warn(s"Setup failed for address ${Config.i2cAddress}")
       }
       case Some(descriptor) => {
-        println(s"Device ${Config.i2cAddress} accessible at fd ${descriptor}")
+        logger.info(s"Device ${Config.i2cAddress} accessible at fd ${descriptor}")
 
         delay(50)
 
@@ -157,12 +158,12 @@ class Display(val dimensions: DisplayDimensions) {
   def update(lines: List[Option[String]]): Unit = Future {
     Try {
       computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
-        // println(s"(${row}, ${col}) => '${char}'")
+        logger.debug(s"(${row}, ${col}) => '${char}'")
         setCursor(row, col)
         printIIC(char)
       }
     } match {
-      case Failure(error) => println(s"Error updating clock: ${error}")
+      case Failure(error) => logger.error("Error updating clock", error)
       case Success(_) =>
     }
   }

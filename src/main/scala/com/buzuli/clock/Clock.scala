@@ -4,11 +4,12 @@ import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import com.buzuli.util.{Scheduled, Scheduler, Time}
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
-class Clock {
+class Clock extends LazyLogging {
   type TickListener = Instant => Unit
 
   private var scheduled: Option[Scheduled] = None
@@ -24,13 +25,13 @@ class Clock {
             .plusSeconds(1)
             .truncatedTo(ChronoUnit.SECONDS)
         ) {
-          println("Starting clock schedule (1-second ticks).")
+          logger.info("Starting clock schedule (1-second ticks).")
           scheduled = Some(
             scheduler.runEvery(
               Duration(1, TimeUnit.SECONDS)
             ) {
               if (Config.logOutput) {
-                println(s"Clock tick @ ${Time.nowUtcIso}")
+                logger.info(s"Clock tick @ ${Time.nowUtcIso}")
               }
               notifyListeners()
             }
@@ -55,7 +56,7 @@ class Clock {
         listener(Instant.now)
       } match {
         case Success(_) =>
-        case Failure(error) => println(s"Error notifying clock listener: ${error}")
+        case Failure(error) => logger.error("Error notifying clock listener", error)
       }
     }
   }
