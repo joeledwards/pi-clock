@@ -81,7 +81,7 @@ object Http {
     url: String,
     headers: List[(String, String)] = Nil,
     body: Option[HttpBody] = None,
-    timeout: Duration = 15.minutes
+    timeout: Duration = 15.seconds
   ): Future[HttpResult] = {
     val start: Instant = Instant.now
 
@@ -203,7 +203,7 @@ object TryHttp extends App with LazyLogging {
   val method = "GET"
   val url = "http://rocket:1337/question?name=bob"
   val headers: List[(String, String)] = List("x-note" -> "test")
-  val timeout = Duration(5, TimeUnit.SECONDS)
+  val timeout = Duration(3, TimeUnit.SECONDS)
 
   Try {
     Await.result(

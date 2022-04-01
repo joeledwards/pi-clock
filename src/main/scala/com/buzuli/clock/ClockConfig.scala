@@ -27,6 +27,7 @@ object Config {
   lazy val internetHealthCheck: Boolean = Env.getToggle("PI_CLOCK_INTERNET_HEALTH_CHECK").getOrElse(false)
   lazy val internetPowerPin: Option[Int] = Env.getInt("PI_CLOCK_INTERNET_POWER_PIN")
   lazy val internetPowerHigh: Boolean = Env.getToggle("PI_CLOCK_INTERNET_POWER_HIGH").getOrElse(false)
+  lazy val internetCheckTimeout: Duration = Env.getDuration("PI_CLOCK_INTERNET_CHECK_TIMEOUT").getOrElse(5.seconds)
   lazy val internetCheckInterval: Duration = Env.getDuration("PI_CLOCK_INTERNET_CHECK_INTERVAL").getOrElse(1.minute)
   lazy val internetOutageDuration: Duration = Env.getDuration("PI_CLOCK_INTERNET_OUTAGE_DURATION").getOrElse(5.minutes)
   lazy val internetResetDelay: Duration = Env.getDuration("PI_CLOCK_INTERNET_RESET_DELAY").getOrElse(15.minutes)
