@@ -92,7 +92,8 @@ object Main extends App with LazyLogging {
               val seconds = timestamp.toString.slice(17, 19)
               val padding = " " * 20
               val ipPadded = s"${ip}${padding}"
-              s"${ipPadded.slice(0, 15)} | ${seconds}"
+              val separator = if (checkInternet.exists(_.isOffline)) "X" else "|"
+              s"${ipPadded.slice(0, 15)} ${separator} ${seconds}"
             }
             case (_, _, ip) => ip
           }

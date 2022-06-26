@@ -51,6 +51,8 @@ class InternetHealth extends LazyLogging {
     }
   }
 
+  def isOffline: Boolean = offlineSince.nonEmpty
+
   def setHigh(): Unit = gpioPin foreach { pin =>
     Try {
       gpio.foreach { _.setState(pin, PinState.HIGH) }
