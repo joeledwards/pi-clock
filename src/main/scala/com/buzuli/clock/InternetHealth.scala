@@ -5,6 +5,7 @@ import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInval
 import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
 import com.typesafe.scalalogging.LazyLogging
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -113,14 +114,29 @@ class InternetHealth extends LazyLogging {
     if (scheduled.isEmpty) {
       logger.info("Scheduling regular Internet health checks ...")
 
+      // The health evaluation can be performed much more frequently
+      // than the actual health check requests
       scheduled = Some(
         scheduler.runEvery(
-          Config.internetCheckInterval,
+          Duration(1, TimeUnit.SECONDS),
           startImmediately = true
         ) {
           run()
         }
       )
+    }
+  }
+
+  private var lastStatus: Option[Instant] = None
+  def logStatus(message: String, warn: Boolean = false, optional: Boolean = false): Unit = {
+    if (!optional || lastStatus.exists(_.plusSeconds(60).isBefore(Instant.now))) {
+      lastStatus = Some(Instant.now)
+
+      if (warn) {
+        logger.warn(message)
+      } else {
+        logger.info(message)
+      }
     }
   }
 
@@ -133,11 +149,11 @@ class InternetHealth extends LazyLogging {
 
         networkDownSince = networkDownSince match {
           case None => {
-            logger.warn("Disconnected from local network.")
+            logStatus("Disconnected from local network.", warn = true)
             Some(Instant.now)
           }
           case ds @ Some(whence) => {
-            logger.warn(s"Local network down since ${whence}.")
+            logStatus(s"Local network down since ${whence}.", warn = true, optional = true)
             ds
           }
         }
@@ -149,14 +165,18 @@ class InternetHealth extends LazyLogging {
             val elapsed = Duration.fromNanos(
               java.time.Duration.between(whence, Instant.now).toNanos
             )
-            logger.info(s"Local network re-connected after ${Time.prettyDuration(elapsed)}")
+            logStatus(s"Local network re-connected after ${Time.prettyDuration(elapsed)}")
             networkDownSince = None
           }
         }
 
         internetDownSince = internetDownSince match {
           case Some(whence) => {
-            logger.warn(s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).")
+            logStatus(
+             s"No Internet connectivity since ${whence} (${Time.prettyDuration(Time.since(whence))}).",
+              warn = true,
+              optional = true
+            )
             val sufficientOfflineDuration = Time.since(whence).gteq(Config.internetOutageDuration)
             val sufficientResetDelay = lastPowerCycleTime match {
               case None => true
@@ -166,13 +186,13 @@ class InternetHealth extends LazyLogging {
             if (sufficientOfflineDuration && sufficientResetDelay) {
               // Only rest if we have been offline for 5 minutes and
               // we haven't attempted a reset in the last 5 minutes.
-              logger.info("Internet reset needed.")
+              logStatus("Internet reset needed.")
               resetInternet()
             }
             Some(whence)
           }
           case None => {
-            logger.warn(s"Internet connectivity lost.")
+            logStatus(s"Internet connectivity lost.", warn = true)
             Some(Instant.now)
           }
         }
@@ -184,7 +204,7 @@ class InternetHealth extends LazyLogging {
             val elapsed = Duration.fromNanos(
               java.time.Duration.between(whence, Instant.now).toNanos
             )
-            logger.info(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
+            logStatus(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}.")
             Notify.slack(s"Internet connectivity restored after ${Time.prettyDuration(elapsed)}")
             internetDownSince = None
           }
@@ -196,12 +216,12 @@ class InternetHealth extends LazyLogging {
             val elapsed = Duration.fromNanos(
               java.time.Duration.between(whence, Instant.now).toNanos
             )
-            logger.info(s"Local network re-connected after ${Time.prettyDuration(elapsed)}")
+            logStatus(s"Local network re-connected after ${Time.prettyDuration(elapsed)}")
             networkDownSince = None
           }
         }
 
-        logger.info("Internet and local network are healthy.")
+        logStatus("Internet and local network are healthy.", optional = true)
       }
     }
   }

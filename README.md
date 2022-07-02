@@ -29,6 +29,7 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_INTERNET_POWER_PIN` : The GPIO pin to which the power relay is connected
 - `PI_CLOCK_INTERNET_POWER_HIGH` : Power is on when the power pin is pulled high (default: `false`)
 - `PI_CLOCK_INTERNET_CHECK_INTERVAL` : Frequency at which to perform Internet health checks (default: `1m`)
+- `PI_CLOCK_INTERNET_CHECK_TIMEOUT` : Health check HTTP request timeout (default: `5s`)
 - `PI_CLOCK_INTERNET_OUTAGE_DURATION` : Outage duration required for an Internet connection reset (default: `5m`)
 - `PI_CLOCK_INTERNET_RESET_DELAY` : Minimum delay between Internet connection resets (default: `15m`)
 - `PI_CLOCK_HEALTH_SLACK_WEBHOOK` : Slack webhook for health checks.
