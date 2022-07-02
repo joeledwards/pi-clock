@@ -38,3 +38,8 @@ You can use environment variables to configure the application:
 ## Notes
 
 The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C.git)
+
+## Wishlist
+
+* Add custom Internet/network URLs for health checks
+* Add option to disable network checks
