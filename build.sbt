@@ -6,6 +6,16 @@ scalaVersion := "2.13.2"
 organization := "com.buzuli"
 organizationName := "Buzuli Bytes"
 
+val versions = {
+  object v {
+    val akka = "2.6.8"
+    val pi4j = "2.2.1"
+    val sttp = "3.3.13"
+  }
+
+  v
+}
+
 /*
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
@@ -18,17 +28,27 @@ lazy val root = (project in file(".")).
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-core
-libraryDependencies += "com.pi4j" % "pi4j-core" % "1.2"
+libraryDependencies += "com.pi4j" % "pi4j-core" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-raspberrypi
+libraryDependencies += "com.pi4j" % "pi4j-plugin-raspberrypi" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-pigpio
+libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-linuxfs
+libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
+
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
-libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.3.13"
-libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % "3.3.13"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % versions.sttp
+libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % versions.sttp
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % versions.akka
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % versions.akka
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-http
 libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
@@ -48,9 +68,9 @@ logBuffered in Test := false
 // The single Java source acts as the entry point for our plugin
 compileOrder := CompileOrder.ScalaThenJava
 
-// Target Java SE 8
-scalacOptions += "-target:jvm-8"
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
+// Target Java SE 11
+scalacOptions += "-target:jvm-11"
+javacOptions ++= Seq("-source", "1.11", "-target", "1.11", "-Xlint")
 
 val gitInfo = {
   import scala.sys.process._
