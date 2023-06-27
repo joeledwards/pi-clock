@@ -6,14 +6,9 @@ scalaVersion := "2.13.10"
 organization := "com.buzuli"
 organizationName := "Buzuli Bytes"
 
-/*
-lazy val root = (project in file(".")).
-  settings(commonSettings: _*).
-  settings(
-    name := "test",
-  ).
-  enablePlugins(AssemblyPlugin)
- */
+val akkaVersion = "2.6.8"
+val sttpVersion = "3.3.13"
+val zioVersion = "2.0.13"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
 
@@ -21,14 +16,18 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
 libraryDependencies += "com.pi4j" % "pi4j-core" % "1.2"
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
-libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.3.13"
-libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % "3.3.13"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % sttpVersion
+libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % sttpVersion
+
+// https://zio.dev/
+libraryDependencies += "dev.zio" %% "zio" % zioVersion
+libraryDependencies += "dev.zio" %% "zio-streams" % zioVersion
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % akkaVersion
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % akkaVersion
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-http
 libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
@@ -67,9 +66,7 @@ val gitInfo = {
 def buildArtifactName(extension: String = ".jar") = {
   val (gitHash, gitDirty) = gitInfo
   val dirtyStr = if (gitDirty) "-dirty" else ""
-  //val name = s"${projectName}-${prestoVersion}-${gitHash}${dirtyStr}-${dateTime}${extension}"
   val name = s"${projectName}-${version}-${gitHash}${dirtyStr}${extension}"
-  //println(s"PRESTO_IAM_AUTH_ARTIFACT: ${name}")
 
   name
 }
@@ -88,6 +85,3 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
-//assemblyJarName in assembly := {
-//  buildArtifactName()
-//}

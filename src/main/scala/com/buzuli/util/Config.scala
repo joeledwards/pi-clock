@@ -79,6 +79,6 @@ object Env extends ConfigSupplier with LazyLogging {
     value
   } match {
     case Failure(_) => None
-    case Success(entry) => entry map { _.trim } filter { !_.isEmpty }
+    case Success(entry) => entry map { _.trim } filter { _.nonEmpty }
   }
 }

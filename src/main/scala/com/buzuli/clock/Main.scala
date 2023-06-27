@@ -4,6 +4,8 @@ import java.time.{ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Strings, SysInfo}
 import com.typesafe.scalalogging.LazyLogging
 
+import zio.{Console, ZIOAppDefault}
+
 object Main extends App with LazyLogging {
   if (Config.checkIntegrity) {
     println("Passed integrity check.")
