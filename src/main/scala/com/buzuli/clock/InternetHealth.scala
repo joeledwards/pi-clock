@@ -104,7 +104,7 @@ class InternetHealth extends LazyLogging {
       new ServiceMonitor("httpbin", "http://httpbin.org/", timeout, delay, true),
       new ServiceMonitor("ip-api", "http://ip-api.com/json", timeout, delay, true),
       new ServiceMonitor("nebula", "http://nebula:1337/health-check", timeout, delay, false),
-      new ServiceMonitor("ironman", "http://ironman:1337/health-check", timeout, delay, false)
+      new ServiceMonitor("vision", "http://vision:1337/health-check", timeout, delay, false)
     )
   }
 
