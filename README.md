@@ -15,12 +15,13 @@ $ java -jar pi-clock-assembly-1.0.0.jar
 ## Configuration
 
 You can use environment variables to configure the application:
-- `PI_CLOCK_CHECK_INTEGRITY` : Exit with `0` status code (simple check for corruption)
-- `PI_CLOCK_RUN_MODE` : The mode in which pi-clock should run (clock | weather-station; default is clock)
-- `PI_CLOCK_I2C_ADDRESS` : The device address of the display (decimal / hex)
-- `PI_CLOCK_LOG_OUTPUT` : Should the device log time update events to stdout (toggle text)
-- `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text)
-- `PI_CLOCK_DISPLAY_DIMENSIONS` : The dimensions of the display (20x4 or 16x2)
+- `PI_CLOCK_CHECK_INTEGRITY` : Exit with `0` status code (simple check for corruption; default: `false`)
+- `PI_CLOCK_RUN_MODE` : The mode in which pi-clock should run (clock | weather-station; default: `clock`)
+- `PI_CLOCK_I2C_BUS_FOR_DISPLAY` : The I2C bus of the display (decimal / hex; default: `0`)
+- `PI_CLOCK_I2C_DEVICE_FOR_DISPLAY` : The I2C device address of the display (decimal / hex; default `0`)
+- `PI_CLOCK_LOG_DISPLAY_UPDATES` : Should the device log detailed display updates to stdout (toggle text; default: `off`)
+- `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text; default: `off`)
+- `PI_CLOCK_DISPLAY_DIMENSIONS` : The dimensions of the display (`20x4` or `16x2`)
 - `PI_CLOCK_HUMAN_FRIENDLY` : Should the display be human friendly; standard is ISO-8601 timestamps (default: `false`)
 - `PI_CLOCK_BUTTON_ENABLED` : Should the control button be enabled (default: `false`)
 - `PI_CLOCK_BUTTON_PIN` : The pin associated with the control button (cycles display mode)

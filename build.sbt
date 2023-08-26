@@ -9,7 +9,7 @@ organizationName := "Buzuli Bytes"
 val versions = {
   object v {
     val akka = "2.6.8"
-    val pi4j = "2.2.1"
+    val pi4j = "2.3.0"
     val sttp = "3.3.13"
   }
 

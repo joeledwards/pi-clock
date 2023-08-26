@@ -2,6 +2,8 @@ package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Strings, SysInfo}
+import com.pi4j.Pi4J
+import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
 
 object Main extends App with LazyLogging {
@@ -9,6 +11,9 @@ object Main extends App with LazyLogging {
     println("Passed integrity check.")
     sys.exit(0)
   }
+
+  // TODO: determine what (if any) additional setup is required
+  implicit private val pi4jContext: Context = Pi4J.newAutoContext()
 
   private var displayContent: DisplayContent = Config.binary match {
     case true => DisplayBinaryTimeUtc
@@ -45,6 +50,7 @@ object Main extends App with LazyLogging {
     button.foreach(_.stop())
     checkInternet.foreach(_.shutdown())
     display.shutdown()
+    pi4jContext.shutdown()
     Http.shutdown()
   }
 
@@ -143,7 +149,7 @@ object Main extends App with LazyLogging {
         }
       }
 
-      if (Config.logOutput) {
+      if (Config.logDisplayUpdates) {
         logLines(lines)
       }
 
