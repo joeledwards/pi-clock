@@ -6,11 +6,11 @@ Simple clock powered by RaspberryPi & I2C driven 4x20 LCD panel
 
 $ sbt assembly
 
-This generates the fat jar in `target/scala-2.13/pi-clock-assembly-1.0.0.jar`
+This generates the fat jar in `target/scala-2.13/pi-clock-assembly-2.0.0.jar`
 
 ## Running
 
-$ java -jar pi-clock-assembly-1.0.0.jar
+$ java -jar pi-clock-assembly-2.0.0.jar
 
 ## Configuration
 
