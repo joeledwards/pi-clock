@@ -1,7 +1,7 @@
 
 val projectName = "pi-clock"
 
-version := "1.0.0"
+version := "2.0.0"
 scalaVersion := "2.13.2"
 organization := "com.buzuli"
 organizationName := "Buzuli Bytes"
