@@ -29,14 +29,14 @@ object Main extends App with LazyLogging {
   }
 
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
-    case (true, Some(pin)) => Some(Button.create(pi4jContext, pin, Config.buttonNormallyClosed))
+    case (true, Some(pin)) => Some(new Button(pi4jContext, pin, Config.buttonNormallyClosed))
     case _ => None
   }
   val checkInternet : Option[InternetHealth] = Config.internetHealthCheck match {
     case true => Some(new InternetHealth(pi4jContext))
     case false => None
   }
-  val display = Display.create(pi4jContext, Config.displayDimensions)
+  val display = new Display(pi4jContext, Config.displayDimensions)
 
   Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler {
     override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {

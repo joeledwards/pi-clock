@@ -131,10 +131,6 @@ class Button(
   }
 }
 
-object Button {
-  def create(pi4jContext: Context, pin: Int, normallyClosed: Boolean): Button = new Button(pi4jContext, pin, normallyClosed)
-}
-
 trait ButtonEventListener {
   def handler: ButtonEvent => Unit
   def once: Boolean

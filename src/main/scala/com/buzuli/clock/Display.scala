@@ -268,10 +268,6 @@ class Display(pi4jContext: Context, val dimensions: DisplayDimensions) extends L
   def scrollRight(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
 }
 
-object Display {
-  def create(pi4jContext: Context, dimensions: DisplayDimensions): Display = new Display(pi4jContext, dimensions)
-}
-
 sealed abstract class DisplayDimensions(val rows: Int, val columns: Int)
 case object Display20x4 extends DisplayDimensions(4, 20)
 case object Display16x2 extends DisplayDimensions(2, 16)
