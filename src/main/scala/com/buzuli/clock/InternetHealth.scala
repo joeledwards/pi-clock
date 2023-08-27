@@ -3,7 +3,7 @@ package com.buzuli.clock
 import java.time.Instant
 import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
 import com.pi4j.context.Context
-import com.pi4j.io.gpio.digital.DigitalOutput
+import com.pi4j.io.gpio.digital.{DigitalOutput, DigitalState}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.util.concurrent.TimeUnit
@@ -76,24 +76,19 @@ class InternetHealth(pi4jContext: Context) extends LazyLogging {
     }
   }
 
+  def resetPower(): Unit = resetPin foreach { pin =>
+    val pulseDirection = if (Config.internetPowerHigh) DigitalState.LOW else DigitalState.HIGH
+    pin.pulse(1, TimeUnit.SECONDS, pulseDirection)
+  }
+
   def powerOn(): Unit = if (Config.internetPowerHigh) setHigh() else setLow()
 
   def powerOff(): Unit = if (Config.internetPowerHigh) setLow() else setHigh()
 
   def resetInternet(): Unit = {
-    resetPin.foreach { _ =>
-      lastPowerCycleTime = Some(Time.now)
-
-      logger.info("Cutting Internet power ...")
-      powerOff()
-      logger.info("Power is off.")
-
-      Scheduler.default.runAfter(1.second) {
-        logger.info("Restoring Internet power ...")
-        powerOn()
-        logger.info("Power is on.")
-      }
-    }
+    logger.info("Pulsing Internet power to reset ...")
+    resetPower()
+    logger.info("Internet reset.")
   }
 
   val monitors: List[ServiceMonitor] = {
