@@ -35,7 +35,7 @@ class InternetHealth(pi4jContext: Context) extends LazyLogging {
         .build
     } match {
       case Success(p) => {
-        logger.info(s"Initializing the Internet reset pin: ${pin}")
+        logger.info(s"Initializing the Internet reset pin: ${p}")
         Scheduler.default.runAfter(1.second) {
           Config.internetPowerHigh match {
             case true => p.high()

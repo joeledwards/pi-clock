@@ -9,7 +9,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
-class Display(val dimensions: DisplayDimensions)(implicit pi4jContext: Context) extends LazyLogging {
+class Display(pi4jContext: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   // commands
@@ -269,7 +269,7 @@ class Display(val dimensions: DisplayDimensions)(implicit pi4jContext: Context) 
 }
 
 object Display {
-  def create(dimensions: DisplayDimensions): Display = new Display(dimensions)
+  def create(pi4jContext: Context, dimensions: DisplayDimensions): Display = new Display(pi4jContext, dimensions)
 }
 
 sealed abstract class DisplayDimensions(val rows: Int, val columns: Int)
