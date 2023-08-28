@@ -9,7 +9,7 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
-class Display(pi4jContext: Context, val dimensions: DisplayDimensions) extends LazyLogging {
+class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   // commands
