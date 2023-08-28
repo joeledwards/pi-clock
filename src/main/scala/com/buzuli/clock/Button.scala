@@ -87,7 +87,7 @@ class Button(
             .address(pin)
             .build
 
-          val input = pi4jContext.digitalInput().create(config)
+          val input = pi4jContext.create(config)
           logger.info(s"Adding listener for pin ${pin}")
 
           eventListener = Some({

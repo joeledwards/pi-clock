@@ -1,7 +1,7 @@
 package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
-import com.buzuli.util.{Http, Strings, SysInfo}
+import com.buzuli.util.{Http, Koozie, Strings, SysInfo}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
@@ -11,9 +11,6 @@ object Main extends App with LazyLogging {
     println("Passed integrity check.")
     sys.exit(0)
   }
-
-  // TODO: determine what (if any) additional setup is required
-  implicit private val pi4jContext: Context = Pi4J.newAutoContext()
 
   private var displayContent: DisplayContent = Config.binary match {
     case true => DisplayBinaryTimeUtc
@@ -28,15 +25,24 @@ object Main extends App with LazyLogging {
     case _ => None
   }
 
+  private val pi4jContext: Koozie[Context] = Koozie.sync(
+    { Some(Pi4J.newAutoContext()) },
+    None,
+    true
+  )
+
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
-    case (true, Some(pin)) => Some(new Button(pi4jContext, pin, Config.buttonNormallyClosed))
+    case (true, Some(pin)) => pi4jContext.value.map(new Button(_, pin, Config.buttonNormallyClosed))
     case _ => None
   }
   val checkInternet : Option[InternetHealth] = Config.internetHealthCheck match {
-    case true => Some(new InternetHealth(pi4jContext))
+    case true => pi4jContext.value.map(new InternetHealth(_))
     case false => None
   }
-  val display = new Display(pi4jContext, Config.displayDimensions)
+  val display: Option[Display] = Config.displayEnabled match {
+    case true => pi4jContext.value.map(new Display(_, Config.displayDimensions))
+    case _ => None
+  }
 
   Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler {
     override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
@@ -49,14 +55,14 @@ object Main extends App with LazyLogging {
     clock.foreach(_.stop())
     button.foreach(_.stop())
     checkInternet.foreach(_.shutdown())
-    display.shutdown()
-    pi4jContext.shutdown()
+    display.foreach(_.shutdown())
+    pi4jContext.stale.foreach(_.shutdown())
     Http.shutdown()
   }
 
   if (Config.displayEnabled) {
     logger.info("Initializing the display ...")
-    display.init()
+    display.foreach(_.init())
   }
 
   // Configure display output on each tick of the clock
@@ -64,7 +70,7 @@ object Main extends App with LazyLogging {
     logger.info("Initializing the clock ...")
 
     clk.onTick { timestamp =>
-      val lines: List[Option[String]] = display.dimensions match {
+      val lines: List[Option[String]] = Config.displayDimensions match {
         // Build lines for 20 x 4 display
         case Display20x4 => {
           val tsLocal = timestamp.atZone(ZoneId.systemDefault)
@@ -154,7 +160,7 @@ object Main extends App with LazyLogging {
       }
 
       if (Config.displayEnabled) {
-        display.update(lines)
+        display.foreach(_.update(lines))
       }
     }
   }
@@ -180,12 +186,12 @@ object Main extends App with LazyLogging {
   checkInternet.foreach(_.start())
 
   def logLines(lines: List[Option[String]]): Unit = {
-    val header = List(s"┌${"─" * display.dimensions.columns}┐")
-    val footer = List(s"└${"─" * display.dimensions.columns}┘")
+    val header = List(s"┌${"─" * Config.displayDimensions.columns}┐")
+    val footer = List(s"└${"─" * Config.displayDimensions.columns}┘")
     val content = lines
         .map(_.getOrElse(""))
-        .map(_.take(display.dimensions.columns))
-        .map(_.padTo(display.dimensions.columns, ' '))
+        .map(_.take(Config.displayDimensions.columns))
+        .map(_.padTo(Config.displayDimensions.columns, ' '))
         .map(line => s"│${line}│")
     val displayText = header ::: content ::: footer
 
