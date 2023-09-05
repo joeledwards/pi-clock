@@ -45,3 +45,23 @@ The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](htt
 
 * Add custom Internet/network URLs for health checks
 * Add option to disable network checks
+
+## Pin Connections
+
+| Display               |
+|=======================|
+| GND--------------     |
+| VCC------------ |     |
+| SDA-----      | |     |
+| SCL--- |      | |     |
+.      | |      | |     .
+       | |      | |      
+       | |      | |       
+.      | |      | |     .
+| 3.3V | |  o o | | 5V  |
+| SDA  | -- o o-- | 5V  |
+| SCL  ---- o o---- GND |
+|=======================|
+| Raspberry Pi          |
+
+
