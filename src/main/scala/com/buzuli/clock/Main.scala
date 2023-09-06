@@ -26,6 +26,12 @@ object Main extends App with LazyLogging {
     true
   )
 
+  pi4jContext.value.foreach { context =>
+    println("= Context =========================")
+    context.platforms.describe.print(System.out)
+    println("===================================")
+  }
+
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
     case (true, Some(pin)) => pi4jContext.value.map(new Button(_, pin, Config.buttonNormallyClosed))
     case _ => None

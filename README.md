@@ -65,3 +65,20 @@ The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](htt
 | Raspberry Pi          |
 
 
+## Identifying I2C Device Address
+
+1) Install the tools
+
+```shell
+sudo apt install i2c-tools
+```
+
+2) Make sure that the I2C interface is enabled (raspberry pi settings, may require a reboot).
+
+
+3) List I2C devices
+
+```shell
+i2cdetect -y 1
+```
+

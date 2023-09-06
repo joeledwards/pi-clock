@@ -83,13 +83,19 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
       pi4jContext
         .provider[I2CProvider]("pigpio-i2c")
         .create(i2cConfig)
-    } toOption
-
-    i2c match {
-      case None => {
+    } match {
+      case Failure(error) => {
+        error.printStackTrace()
         logger.warn(s"I2C setup failed for bus=${Config.i2cBusForDisplay} device=${Config.i2cDeviceForDisplay}")
+        None
       }
-      case Some(descriptor) => {
+      case Success(display) => {
+        logger.info(s"Display is available on I2C")
+        Some(display)
+      }
+    }
+
+    i2c foreach { _ =>
         logger.info(s"Display is available on I2C")
 
         delay(50)
@@ -112,7 +118,6 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
         home()
 
         delay(200)
-      }
     }
   }
 

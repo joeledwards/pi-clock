@@ -19,6 +19,11 @@ trait Koozie[T] {
    * @return the contained value without refreshing it
    */
   def stale: Option[T]
+
+  /**
+   * @return the value, forcing a refresh
+   */
+  def fresh: Option[T]
 }
 
 class SyncKoozie[T](
@@ -30,6 +35,8 @@ class SyncKoozie[T](
   private var _value: Option[T] = if (eager) refresh() else None
   override def value: Option[T] = maybeRefresh { _value }
   override def stale: Option[T] = _value
+  override def fresh: Option[T] = refresh
+  
   private def now: Instant = Instant.now
 
   private def refresh(): Option[T] = {
