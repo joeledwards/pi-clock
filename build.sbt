@@ -1,15 +1,20 @@
 val projectName = "pi-clock"
 
 version := "2.0.0"
-scalaVersion := "2.13.2"
+scalaVersion := "2.13.11"
 organization := "com.buzuli"
 organizationName := "Buzuli Bytes"
 
 val versions = {
   object v {
     val akka = "2.6.8"
+    val akkaHttp = "10.2.0"
+    val logbackClassic = "1.2.10"
     val pi4j = "2.3.0"
-    val sttp = "3.3.13"
+    val playJson = "2.9.0"
+    val scalaLogging = "3.9.4"
+    val scalatest = "3.2.17"
+    val sttp = "3.8.16"
   }
 
   v
@@ -24,7 +29,7 @@ lazy val root = (project in file("."))
   .enablePlugins(AssemblyPlugin)
 */
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
+libraryDependencies += "org.scalatest" %% "scalatest" % versions.scalatest
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-core
 libraryDependencies += "com.pi4j" % "pi4j-core" % versions.pi4j
@@ -33,11 +38,10 @@ libraryDependencies += "com.pi4j" % "pi4j-core" % versions.pi4j
 libraryDependencies += "com.pi4j" % "pi4j-plugin-raspberrypi" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-pigpio
-libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
+//libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-linuxfs
-//libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
-
+libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
 libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % versions.sttp
@@ -50,16 +54,16 @@ libraryDependencies += "com.typesafe.akka" %% "akka-actor" % versions.akka
 libraryDependencies += "com.typesafe.akka" %% "akka-stream" % versions.akka
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-http
-libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-http" % versions.akkaHttp
 
 // https://mvnrepository.com/artifact/com.typesafe.play/play-json
-libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.0"
+libraryDependencies += "com.typesafe.play" %% "play-json" % versions.playJson
 
 // https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % versions.scalaLogging
 
 // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % versions.logbackClassic
 
 // Helpful when testing (recommended by scalatest)
 Test / logBuffered := false

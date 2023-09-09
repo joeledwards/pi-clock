@@ -79,7 +79,7 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
         .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
-        .provider("pigpio-i2c")
+        .provider("linuxfs-i2c")
         .build
 
       pi4jContext
