@@ -101,11 +101,14 @@ artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
 
 assembly / mainClass := Some("com.buzuli.clock.Main")
 
+assembly / logLevel := Level.Debug
+
 assembly / assemblyMergeStrategy := {
   case PathList(path, xs @ _*) if path.startsWith("jackson-") => MergeStrategy.last
   case PathList("META-INF", "Main-Class", "com.buzuli.clock.Main") => MergeStrategy.first
+  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case PathList("reference.conf") => MergeStrategy.concat
+  case "reference.conf" => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
 

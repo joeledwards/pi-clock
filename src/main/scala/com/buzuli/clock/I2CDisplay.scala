@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
 
-class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extends LazyLogging {
+class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   // commands
@@ -77,16 +77,16 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
 
   def init(): Unit = {
     i2c = Try {
-      val i2cConfig = I2C.newConfigBuilder(pi4jContext)
+
+      val i2cConfig = I2C.newConfigBuilder(pi4j)
         .name("display")
         .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
-        .provider(PiGpioI2CProvider.NAME)
+        .provider(PiGpioI2CProvider.ID)
         .build
 
-      pi4jContext
-        .create(i2cConfig)
+      pi4j.create(i2cConfig)
     } match {
       case Failure(error) => {
         error.printStackTrace()
