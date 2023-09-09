@@ -1,3 +1,6 @@
 target/
 *.jar
+.bloop/
 .idea/
+.metals/
+.vscode/

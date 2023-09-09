@@ -27,9 +27,24 @@ object Main extends App with LazyLogging {
   )
 
   pi4jContext.value.foreach { context =>
-    println("= Context =========================")
+    println("= Platforms =======================")
     context.platforms.describe.print(System.out)
     println("===================================")
+    println("")
+  }
+
+  pi4jContext.value.foreach { context =>
+    println("= Providers =======================")
+    context.providers.describe.print(System.out)
+    println("===================================")
+    println("")
+  }
+
+  pi4jContext.value.foreach { context =>
+    println("= Registry ========================")
+    context.registry.describe.print(System.out)
+    println("===================================")
+    println("")
   }
 
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {

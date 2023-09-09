@@ -1,4 +1,3 @@
-
 val projectName = "pi-clock"
 
 version := "2.0.0"
@@ -17,13 +16,13 @@ val versions = {
 }
 
 /*
-lazy val root = (project in file(".")).
-  settings(commonSettings: _*).
-  settings(
+lazy val root = (project in file("."))
+  .settings(commonSettings: _*)
+  .settings(
     name := "test",
-  ).
-  enablePlugins(AssemblyPlugin)
- */
+  )
+  .enablePlugins(AssemblyPlugin)
+*/
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
 
@@ -37,7 +36,7 @@ libraryDependencies += "com.pi4j" % "pi4j-plugin-raspberrypi" % versions.pi4j
 libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-linuxfs
-libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
+//libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
 
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
@@ -63,7 +62,7 @@ libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
 
 // Helpful when testing (recommended by scalatest)
-logBuffered in Test := false
+Test / logBuffered := false
 
 // The single Java source acts as the entry point for our plugin
 compileOrder := CompileOrder.ScalaThenJava
@@ -87,9 +86,7 @@ val gitInfo = {
 def buildArtifactName(extension: String = ".jar") = {
   val (gitHash, gitDirty) = gitInfo
   val dirtyStr = if (gitDirty) "-dirty" else ""
-  //val name = s"${projectName}-${prestoVersion}-${gitHash}${dirtyStr}-${dateTime}${extension}"
   val name = s"${projectName}-${version}-${gitHash}${dirtyStr}${extension}"
-  //println(s"PRESTO_IAM_AUTH_ARTIFACT: ${name}")
 
   name
 }
@@ -98,9 +95,9 @@ artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
   buildArtifactName(s".${artifact.extension}")
 }
 
-mainClass in assembly := Some("com.buzuli.clock.Main")
+assembly / mainClass := Some("com.buzuli.clock.Main")
 
-assemblyMergeStrategy in assembly := {
+assembly / assemblyMergeStrategy := {
   case PathList(path, xs @ _*) if path.startsWith("jackson-") => MergeStrategy.last
   case PathList("META-INF", "Main-Class", "com.buzuli.clock.Main") => MergeStrategy.first
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
@@ -108,6 +105,6 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
-//assemblyJarName in assembly := {
+//assembly / assemblyJarName := {
 //  buildArtifactName()
 //}

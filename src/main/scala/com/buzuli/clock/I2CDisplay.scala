@@ -76,12 +76,13 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
     i2c = Try {
       val i2cConfig = I2C.newConfigBuilder(pi4jContext)
         .name("display")
+        .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
+        .provider("pigpio-i2c")
         .build
 
       pi4jContext
-        .provider[I2CProvider]("pigpio-i2c")
         .create(i2cConfig)
     } match {
       case Failure(error) => {
