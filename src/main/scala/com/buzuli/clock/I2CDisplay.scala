@@ -100,28 +100,30 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     }
 
     i2c foreach { _ =>
-        logger.info(s"Display is available on I2C")
+      logger.info("Initializing the I2C display ...")
 
-        delay(50)
+      delay(50)
 
-        write(backlight)
-        delay(1000)
+      write(backlight)
+      delay(1000)
 
-        write4Bits(0x03 << 4)
-        delay(5)
-        write4Bits(0x03 << 4)
-        delay(5)
-        write4Bits(0x03 << 4)
-        delay(1)
-        write4Bits(0x02 << 4)
+      write4Bits(0x03 << 4)
+      delay(5)
+      write4Bits(0x03 << 4)
+      delay(5)
+      write4Bits(0x03 << 4)
+      delay(1)
+      write4Bits(0x02 << 4)
 
-        function()
-        control()
-        clear()
-        mode()
-        home()
+      function()
+      control()
+      clear()
+      mode()
+      home()
 
-        delay(200)
+      delay(200)
+
+      logger.info("I2C display initialization complete.")
     }
   }
 

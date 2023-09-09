@@ -117,11 +117,15 @@ object Main extends App with LazyLogging {
     }
   }
 
-  logger.info("Running ...")
+  logger.info("Starting services ...")
 
   clock.foreach(_.start())
   button.foreach(_.start())
   checkInternet.foreach(_.start())
+
+  logger.info("Running ...")
+
+  // TODO: Determine if I need to block the main thread in order to prevent early termination.
 
   def logLines(lines: List[Option[String]]): Unit = {
     val header = List(s"┌${"─" * Config.displayDimensions.columns}┐")
@@ -136,4 +140,3 @@ object Main extends App with LazyLogging {
     logger.info(s"Display:\n${displayText.mkString("\n")}")
   }
 }
-
