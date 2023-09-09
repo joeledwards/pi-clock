@@ -2,12 +2,15 @@ package com.buzuli.clock
 
 import com.pi4j.context.Context
 import com.pi4j.io.i2c.{I2C, I2CProvider}
+import com.pi4j.library.pigpio.PiGpio
+import com.pi4j.plugin.pigpio.provider.i2c.PiGpioI2CProvider
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
+
 
 class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -79,7 +82,7 @@ class I2CDisplay(pi4jContext: Context, val dimensions: DisplayDimensions) extend
         .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
-        .provider("linuxfs-i2c")
+        .provider(PiGpioI2CProvider.NAME)
         .build
 
       pi4jContext
