@@ -105,9 +105,11 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
       delay(50)
 
+      logger.info("Enabling the backlight ...")
       write(backlight)
       delay(1000)
 
+      logger.info("Running the init sequence ...")
       write4Bits(0x03 << 4)
       delay(5)
       write4Bits(0x03 << 4)
@@ -116,10 +118,19 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
       delay(1)
       write4Bits(0x02 << 4)
 
+      logger.info("Function Set")
       function()
+
+      logger.info("Display Control")
       control()
+
+      logger.info("Clear Display")
       clear()
+
+      logger.info("Entry Mode")
       mode()
+
+      logger.info("Return Home")
       home()
 
       delay(200)
