@@ -15,10 +15,7 @@ object Main extends App with LazyLogging {
   val addressStr = SysInfo.addresses.value.map(_.mkString("\n")).getOrElse("")
   logger.info(s"All Addresses:\n${addressStr}")
 
-  val clock: Option[Clock] = Config.runMode match {
-    case ClockMode => Some(Clock.create())
-    case _ => None
-  }
+  val clock: Option[Clock] = Some(Clock.create())
 
   private val pi4jContext: Koozie[Context] = Koozie.sync(
     { Some(Pi4J.newAutoContext()) },
@@ -124,8 +121,6 @@ object Main extends App with LazyLogging {
   checkInternet.foreach(_.start())
 
   logger.info("Running ...")
-
-  // TODO: Determine if I need to block the main thread in order to prevent early termination.
 
   def logLines(lines: List[Option[String]]): Unit = {
     val header = List(s"┌${"─" * Config.displayDimensions.columns}┐")

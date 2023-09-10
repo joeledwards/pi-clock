@@ -1,7 +1,6 @@
 #! /bin/bash
 
 export PI_CLOCK_CHECK_INTEGRITY=no  #-----------# Exit with `0` status code (simple check for corruption; default: `false`)
-export PI_CLOCK_RUN_MODE=clock #----------------# The mode in which pi-clock should run (clock | weather-station; default: `clock`)
 export PI_CLOCK_I2C_BUS_FOR_DISPLAY=0x01 #------# The I2C bus of the display (decimal / hex; default: `0`)
 export PI_CLOCK_I2C_DEVICE_FOR_DISPLAY=0x27 #---# The I2C device address of the display (decimal / hex; default `0`)
 export PI_CLOCK_LOG_DISPLAY_UPDATES=off #-------# Should the device log detailed display updates to stdout (toggle text; default: `off`)

@@ -4,17 +4,6 @@ import com.buzuli.util.Env
 
 import scala.concurrent.duration._
 
-sealed trait RunMode
-case object ClockMode extends RunMode
-case object WeatherStationMode extends RunMode
-
-object RunMode {
-  def of(mode: String): Option[RunMode] = mode match {
-    case "weather-station" => Some(WeatherStationMode)
-    case _ => Some(ClockMode)
-  }
-}
-
 object Config {
   lazy val checkIntegrity: Boolean = Env.getToggle("PI_CLOCK_CHECK_INTEGRITY").getOrElse(false)
 
@@ -48,6 +37,4 @@ object Config {
       Display20x4
     }
   }
-
-  lazy val runMode: RunMode = Env.getAs("PI_CLOCK_RUN_MODE") { RunMode.of } getOrElse { ClockMode }
 }

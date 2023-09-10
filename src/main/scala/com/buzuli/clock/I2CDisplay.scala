@@ -77,7 +77,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
   def init(): Unit = {
     i2c = Try {
-
+      logger.info("Creating I2C Config ...")
       val i2cConfig = I2C.newConfigBuilder(pi4j)
         .name("display")
         .id("display")
@@ -86,6 +86,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
         .provider(PiGpioI2CProvider.ID)
         .build
 
+      logger.info("Creating I2C Object ...")
       pi4j.create(i2cConfig)
     } match {
       case Failure(error) => {
