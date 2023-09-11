@@ -103,36 +103,37 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     i2c foreach { _ =>
       logger.info("Initializing the I2C display ...")
 
-      delay(50)
+      delay(50) // > 40ms
 
-      logger.info("Enabling the backlight ...")
+      logger.info("Enabling the backlight")
       write(backlight)
       delay(1000)
 
-      logger.info("Running the init sequence ...")
+      logger.info("Setting 4-bit mode")
       write4Bits(0x03 << 4)
-      delay(5)
+      delay(5) // >4100us
       write4Bits(0x03 << 4)
-      delay(5)
+      delay(5) // >4100ms
       write4Bits(0x03 << 4)
-      delay(1)
+      delay(1) // >150us
       write4Bits(0x02 << 4)
 
-      logger.info("Function Set")
+      logger.info("LCD Function Set")
       function()
 
-      logger.info("Display Control")
+      logger.info("Display Controls (display on, cursor)")
       control()
 
       logger.info("Clear Display")
       clear()
 
-      logger.info("Entry Mode")
+      logger.info("Entry Mode (left, shift decrement)")
       mode()
 
       logger.info("Return Home")
       home()
 
+      // Enforce a long enough wait here before allowing any external updates
       delay(200)
 
       logger.info("I2C display initialization complete.")
@@ -160,14 +161,14 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     val newDisplay = generateDisplay()
 
     lines
-      .take(4)
+      .take(dimensions.rows)
       .zipWithIndex
       .map(x => x._1.map((_, x._2)))
       .filter(_.isDefined)
       .map(_.get)
       .foreach { case (line, row) =>
         line
-          .take(20)
+          .take(dimensions.columns)
           .zipWithIndex
           .foreach { case (char, col) =>
             newDisplay(row)(col) = Some(char)
@@ -205,16 +206,15 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
   // Helper functions
   def delay(millis: Long): Unit = Thread.sleep(millis)
 
-  def write(data: Int): Unit = i2c foreach {
-    _.write(data | backlight)
+  def write(data: Int): Unit = i2c foreach { i =>
+    i.write(data | backlight)
   }
 
   def pulseEnable(data: Int): Unit = {
-    // Ignoring the required delays since the JVM should be plenty slow...
     write(data | ENABLE)
-    // delay >450ns
+    // delay >450ns (the JVM should be plenty slow)
     write(data & ~ENABLE)
-    // delay >450ns
+    // delay >37us (do we need to sleep here?)
   }
 
   def write4Bits(data: Int): Unit = {
