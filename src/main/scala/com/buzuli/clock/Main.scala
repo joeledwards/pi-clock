@@ -1,10 +1,13 @@
 package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
-import com.buzuli.util.{Http, Koozie, Strings, SysInfo}
+import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Timing}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
+
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 
 object Main extends App with LazyLogging {
   if (Config.checkIntegrity) {
@@ -44,6 +47,18 @@ object Main extends App with LazyLogging {
     println("")
   }
 
+  logger.info("Testing delays ...")
+
+  val tnt = Timing.samples(1000) { System.nanoTime }
+  val tms = Timing.samples(1000) { System.currentTimeMillis }
+  val td0 = Timing.samples(1000) { Timing.delaySync(Duration.Zero) }
+  val td1 = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
+
+  logger.info(s"System.nanoTime => ${tnt}")
+  logger.info(s"System.currentTimeMillis => ${tms}")
+  logger.info(s"delaySync(0) => ${td0}")
+  logger.info(s"delaySync(1ms) => ${td1}")
+
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
     case (true, Some(pin)) => pi4jContext.value.map(new Button(_, pin, Config.buttonNormallyClosed))
     case _ => None
@@ -57,10 +72,8 @@ object Main extends App with LazyLogging {
     case _ => None
   }
 
-  Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler {
-    override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {
-      logger.error("Encountered un-caught exception!", throwable)
-    }
+  Thread.setDefaultUncaughtExceptionHandler((thread: Thread, throwable: Throwable) => {
+    logger.error(s"Encountered un-caught exception in thread ${thread.getName}!", throwable)
   })
 
   sys.addShutdownHook {
