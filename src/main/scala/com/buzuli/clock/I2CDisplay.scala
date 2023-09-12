@@ -102,6 +102,27 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
     i2c foreach { _ =>
       logger.info("Initializing the I2C display ...")
+      
+      logger.info("Testing delays ...")
+
+      val nt1 = System.nanoTime
+      val nt2 = System.nanoTime
+      val now = System.currentTimeMillis
+      val nt3 = System.nanoTime
+      delay(0)
+      val nt4 = System.nanoTime
+      delay(1)
+      val nt5 = System.nanoTime
+
+      val tnt = nt2 - nt1
+      val tms = nt3 - nt2
+      val td0 = nt4 - nt3
+      val td1 = nt5 - nt4
+
+      logger.info(s"System.nanoTime took ${tnt}")
+      logger.info(s"System.currentTimeMillis took ${tms}")
+      logger.info(s"delay(0) took ${td0}")
+      logger.info(s"delay(1) took ${td1}")
 
       delay(50) // > 40ms
 
@@ -213,8 +234,11 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
   def pulseEnable(data: Int): Unit = {
     write(data | ENABLE)
     // delay >450ns (the JVM should be plenty slow)
+    System.nanoTime()
+
     write(data & ~ENABLE)
     // delay >37us (do we need to sleep here?)
+    System.currentTimeMillis()
   }
 
   def write4Bits(data: Int): Unit = {
