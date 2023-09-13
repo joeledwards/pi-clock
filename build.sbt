@@ -38,7 +38,7 @@ libraryDependencies += "com.pi4j" % "pi4j-core" % versions.pi4j
 libraryDependencies += "com.pi4j" % "pi4j-plugin-raspberrypi" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-pigpio
-//libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
+libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-linuxfs
 libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j

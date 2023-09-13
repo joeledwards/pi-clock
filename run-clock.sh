@@ -4,6 +4,7 @@ export PI_CLOCK_CHECK_INTEGRITY=no  #-----------# Exit with `0` status code (sim
 export PI_CLOCK_I2C_BUS_FOR_DISPLAY=0x01 #------# The I2C bus of the display (decimal / hex; default: `0`)
 export PI_CLOCK_I2C_DEVICE_FOR_DISPLAY=0x27 #---# The I2C device address of the display (decimal / hex; default `0`)
 export PI_CLOCK_LOG_DISPLAY_UPDATES=off #-------# Should the device log detailed display updates to stdout (toggle text; default: `off`)
+export PI_CLOCK_LOG_TIMING_INFO=off #-----------# Should the device log details on how long delays and updates take (toggle text; default: `off`)
 export PI_CLOCK_DISPLAY_ENABLED=on  #-----------# This can be switched off to test on a non-pi system (toggle text; default: `off`)
 export PI_CLOCK_DISPLAY_DIMENSIONS=20x4 #-------# The dimensions of the display (`20x4` or `16x2`)
 export PI_CLOCK_HUMAN_FRIENDLY=yes #------------# Should the display be human friendly; standard is ISO-8601 timestamps (default: `false`)

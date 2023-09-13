@@ -29,6 +29,7 @@ object Config {
   lazy val i2cBusForDisplay: Int = Env.getInt("PI_CLOCK_I2C_BUS_FOR_DISPLAY").getOrElse(0)
   lazy val i2cDeviceForDisplay: Int = Env.getInt("PI_CLOCK_I2C_DEVICE_FOR_DISPLAY").getOrElse(0)
   lazy val logDisplayUpdates: Boolean = Env.getToggle("PI_CLOCK_LOG_DISPLAY_UPDATES").getOrElse(false)
+  lazy val logTimingInfo: Boolean = Env.getToggle("PI_CLOCK_LOG_TIMING_INFO").getOrElse(false)
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
   lazy val displayDimensions: DisplayDimensions = {
     Env.getAs("PI_CLOCK_DISPLAY_DIMENSIONS") {

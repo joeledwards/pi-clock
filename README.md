@@ -19,6 +19,7 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_I2C_BUS_FOR_DISPLAY` : The I2C bus of the display (decimal / hex; default: `0`)
 - `PI_CLOCK_I2C_DEVICE_FOR_DISPLAY` : The I2C device address of the display (decimal / hex; default `0`)
 - `PI_CLOCK_LOG_DISPLAY_UPDATES` : Should the device log detailed display updates to stdout (toggle text; default: `off`)
+- `PI_CLOCK_LOG_TIMING_INFO` : Should the device log details on how long delays and updates take (toggle text; default: `off`)
 - `PI_CLOCK_DISPLAY_ENABLED` : This can be switched off to test on a non-pi system (toggle text; default: `off`)
 - `PI_CLOCK_DISPLAY_DIMENSIONS` : The dimensions of the display (`20x4` or `16x2`)
 - `PI_CLOCK_HUMAN_FRIENDLY` : Should the display be human friendly; standard is ISO-8601 timestamps (default: `false`)

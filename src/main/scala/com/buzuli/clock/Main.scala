@@ -25,62 +25,13 @@ object Main extends App with LazyLogging {
     None,
     true
   )
-
-  pi4jContext.value.foreach { context =>
-    println("= Platforms =======================")
-    context.platforms.describe.print(System.out)
-    println("===================================")
-    println("")
+  
+  pi4jContext.value.foreach {
+    logContextInfo(_)
   }
 
-  pi4jContext.value.foreach { context =>
-    println("= Providers =======================")
-    context.providers.describe.print(System.out)
-    println("===================================")
-    println("")
-  }
-
-  pi4jContext.value.foreach { context =>
-    println("= Registry ========================")
-    context.registry.describe.print(System.out)
-    println("===================================")
-    println("")
-  }
-
-  logger.info("Testing delays ...")
-
-  val tnt = Timing.samples(1000) { System.nanoTime }
-  logger.info(s"System.nanoTime => ${tnt}")
-
-  val tms = Timing.samples(1000) { System.currentTimeMillis }
-  logger.info(s"System.currentTimeMillis => ${tms}")
-
-  val tdz = Timing.samples(1000) { Timing.delaySync(Duration.Zero) }
-  logger.info(s"delaySync(0) => ${tdz}")
-
-  val tdu = Timing.samples(1000) { Timing.delaySync(Duration(10, TimeUnit.MICROSECONDS)) }
-  logger.info(s"delaySync(10us) => ${tdu}")
-
-  val tdm = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
-  logger.info(s"delaySync(1ms) => ${tdm}")
-
-  List(
-    Duration(1, TimeUnit.NANOSECONDS),
-    Duration(100, TimeUnit.NANOSECONDS),
-
-    Duration(5, TimeUnit.MICROSECONDS),
-    Duration(200, TimeUnit.MICROSECONDS),
-    Duration(499, TimeUnit.MICROSECONDS),
-    Duration(500, TimeUnit.MICROSECONDS),
-    Duration(999, TimeUnit.MICROSECONDS),
-
-    Duration(1, TimeUnit.MILLISECONDS),
-    Duration(20, TimeUnit.MILLISECONDS),
-  ) foreach { delay =>
-    val (_, actual) = Timing.sample {
-      Timing.delaySync(delay)
-    }
-    logger.info(s"Timing.delaySync: expected=${Time.prettyDuration(delay)} actual=${Time.prettyDuration(actual)}")
+  if (Config.logTimingInfo) {
+    testDelays()
   }
 
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
@@ -135,7 +86,10 @@ object Main extends App with LazyLogging {
         val (_ , duration) = Timing.sample {
           display.foreach(_.update(lines))
         }
-        logger.info(s"Display update took ${Time.prettyDuration(duration)}")
+
+        if (Config.logTimingInfo) {
+          logger.info(s"Display update took ${Time.prettyDuration(duration)}")
+        }
       }
     }
   }
@@ -173,5 +127,57 @@ object Main extends App with LazyLogging {
     val displayText = header ::: content ::: footer
 
     logger.info(s"Display:\n${displayText.mkString("\n")}")
+  }
+
+  def testDelays(): Unit = { 
+    logger.info("Testing delays ...")
+
+    val tnt = Timing.samples(1000) { System.nanoTime }
+    logger.info(s"System.nanoTime => ${tnt}")
+
+    val tms = Timing.samples(1000) { System.currentTimeMillis }
+    logger.info(s"System.currentTimeMillis => ${tms}")
+
+    val tdz = Timing.samples(1000) { Timing.delaySync(Duration.Zero) }
+    logger.info(s"delaySync(0) => ${tdz}")
+
+    val tdu = Timing.samples(1000) { Timing.delaySync(Duration(10, TimeUnit.MICROSECONDS)) }
+    logger.info(s"delaySync(10us) => ${tdu}")
+
+    val tdm = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
+    logger.info(s"delaySync(1ms) => ${tdm}")
+
+    List(
+      Duration(1, TimeUnit.NANOSECONDS),
+      Duration(100, TimeUnit.NANOSECONDS),
+
+      Duration(5, TimeUnit.MICROSECONDS),
+      Duration(200, TimeUnit.MICROSECONDS),
+      Duration(499, TimeUnit.MICROSECONDS),
+      Duration(500, TimeUnit.MICROSECONDS),
+      Duration(999, TimeUnit.MICROSECONDS),
+
+      Duration(1, TimeUnit.MILLISECONDS),
+      Duration(20, TimeUnit.MILLISECONDS),
+    ) foreach { delay =>
+      val (_, actual) = Timing.sample {
+        Timing.delaySync(delay)
+      }
+      logger.info(s"Timing.delaySync: expected=${Time.prettyDuration(delay)} actual=${Time.prettyDuration(actual)}")
+    }
+  }
+
+  def logContextInfo(context: Context): Unit = {
+    logger.debug(s"""Pi4J 2 Platforms:
+${Strings.stream(context.platforms.describe.print(_))}
+    """)
+
+    logger.debug(s"""Pi4J 2 Providers:
+${Strings.stream(context.providers.describe.print(_))}
+    """)
+
+    logger.debug(s"""Pi4J 2 Registry:
+${Strings.stream(context.registry.describe.print(_))}
+    """)
   }
 }
