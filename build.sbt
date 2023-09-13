@@ -1,56 +1,70 @@
-
 val projectName = "pi-clock"
 
-version := "1.0.0"
-scalaVersion := "2.13.10"
+version := "2.0.0"
+scalaVersion := "2.13.11"
 organization := "com.buzuli"
 organizationName := "Buzuli Bytes"
 
-/*
-lazy val root = (project in file(".")).
-  settings(commonSettings: _*).
-  settings(
-    name := "test",
-  ).
-  enablePlugins(AssemblyPlugin)
- */
+val versions = {
+  object v {
+    val akka = "2.6.8"
+    val akkaHttp = "10.2.0"
+    val logbackClassic = "1.2.10"
+    val pi4j = "2.3.0"
+    val playJson = "2.9.0"
+    val scalaLogging = "3.9.4"
+    val scalatest = "3.2.17"
+    val sttp = "3.8.16"
+  }
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1"
+  v
+}
+
+libraryDependencies += "org.scalatest" %% "scalatest" % versions.scalatest
 
 // https://mvnrepository.com/artifact/com.pi4j/pi4j-core
-libraryDependencies += "com.pi4j" % "pi4j-core" % "1.2"
+libraryDependencies += "com.pi4j" % "pi4j-core" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-raspberrypi
+libraryDependencies += "com.pi4j" % "pi4j-plugin-raspberrypi" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-pigpio
+libraryDependencies += "com.pi4j" % "pi4j-plugin-pigpio" % versions.pi4j
+
+// https://mvnrepository.com/artifact/com.pi4j/pi4j-plugin-linuxfs
+libraryDependencies += "com.pi4j" % "pi4j-plugin-linuxfs" % versions.pi4j
 
 // https://mvnrepository.com/artifact/com.softwaremill.sttp.client/core
-libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.3.13"
-libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % "3.3.13"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % versions.sttp
+libraryDependencies += "com.softwaremill.sttp.client3" %% "akka-http-backend" % versions.sttp
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % versions.akka
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.6.8"
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % versions.akka
 
 // https://mvnrepository.com/artifact/com.typesafe.akka/akka-http
-libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-http" % versions.akkaHttp
 
 // https://mvnrepository.com/artifact/com.typesafe.play/play-json
-libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.0"
+libraryDependencies += "com.typesafe.play" %% "play-json" % versions.playJson
 
 // https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % versions.scalaLogging
 
 // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % versions.logbackClassic
 
 // Helpful when testing (recommended by scalatest)
-logBuffered in Test := false
+Test / logBuffered := false
 
 // The single Java source acts as the entry point for our plugin
 compileOrder := CompileOrder.ScalaThenJava
 
-// Target Java SE 8
-scalacOptions += "-target:jvm-8"
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint")
+// Target Java SE 11
+scalacOptions += "-target:jvm-11"
+javacOptions ++= Seq("-source", "1.11", "-target", "1.11", "-Xlint")
 
 val gitInfo = {
   import scala.sys.process._
@@ -67,9 +81,7 @@ val gitInfo = {
 def buildArtifactName(extension: String = ".jar") = {
   val (gitHash, gitDirty) = gitInfo
   val dirtyStr = if (gitDirty) "-dirty" else ""
-  //val name = s"${projectName}-${prestoVersion}-${gitHash}${dirtyStr}-${dateTime}${extension}"
   val name = s"${projectName}-${version}-${gitHash}${dirtyStr}${extension}"
-  //println(s"PRESTO_IAM_AUTH_ARTIFACT: ${name}")
 
   name
 }
@@ -78,16 +90,15 @@ artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
   buildArtifactName(s".${artifact.extension}")
 }
 
-mainClass in assembly := Some("com.buzuli.clock.Main")
+assembly / mainClass := Some("com.buzuli.clock.Main")
 
-assemblyMergeStrategy in assembly := {
+assembly / logLevel := Level.Debug
+
+assembly / assemblyMergeStrategy := {
   case PathList(path, xs @ _*) if path.startsWith("jackson-") => MergeStrategy.last
   case PathList("META-INF", "Main-Class", "com.buzuli.clock.Main") => MergeStrategy.first
+  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case PathList("reference.conf") => MergeStrategy.concat
+  case "reference.conf" => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
-
-//assemblyJarName in assembly := {
-//  buildArtifactName()
-//}

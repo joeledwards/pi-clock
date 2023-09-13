@@ -1,13 +1,20 @@
 package com.buzuli.clock
 
-import com.pi4j.wiringpi.I2C
+import com.buzuli.util.Timing
+import com.pi4j.context.Context
+import com.pi4j.io.i2c.{I2C, I2CProvider}
 import com.typesafe.scalalogging.LazyLogging
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.language.postfixOps
 
-class Display(val dimensions: DisplayDimensions) extends LazyLogging {
+import scala.concurrent.duration._
+
+class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   // commands
@@ -56,7 +63,7 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
   val READ_WRITE = 0x02
   val REGISTER_SELECT = 0x01
 
-  private var fd: Option[Int] = None
+  private var i2c: Option[I2C] = None
 
   private def generateDisplay(): Array[Array[Option[Char]]] = {
     Array.fill[Array[Option[Char]]](dimensions.rows) {
@@ -71,54 +78,82 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
   private var displayMode: Int = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT
 
   def init(): Unit = {
-    fd = Try {
-      I2C.wiringPiI2CSetup(Config.i2cAddress)
+    i2c = Try {
+      logger.info("Creating I2C Config ...")
+      val i2cConfig = I2C.newConfigBuilder(pi4j)
+        .name("display")
+        .id("display")
+        .bus(Config.i2cBusForDisplay)
+        .device(Config.i2cDeviceForDisplay)
+        .provider("linuxfs-i2c")
+        .build
+
+      logger.info("Creating I2C Object ...")
+      pi4j.create(i2cConfig)
     } match {
-      case Success(fd) if fd != -1 => Some(fd)
-      case _ => None
+      case Failure(error) => {
+        error.printStackTrace()
+        logger.warn(s"I2C setup failed for bus=${Config.i2cBusForDisplay} device=${Config.i2cDeviceForDisplay}")
+        None
+      }
+      case Success(display) => {
+        logger.info(s"Display is available on I2C")
+        Some(display)
+      }
     }
 
-    fd match {
-      case None => {
-        logger.warn(s"Setup failed for address ${Config.i2cAddress}")
-      }
-      case Some(descriptor) => {
-        logger.info(s"Device ${Config.i2cAddress} accessible at fd ${descriptor}")
+    i2c foreach { _ =>
+      logger.info("Initializing the I2C display ...")
+      
+      delay(50.millis) // > 40ms
 
-        delay(50)
+      logger.info("Enabling the backlight")
+      write(backlight)
+      delay(1.second)
 
-        write(backlight)
-        delay(1000)
+      logger.info("Setting 4-bit mode")
+      write4Bits(0x03 << 4)
+      delay(4200.micros) // >4100us
+      write4Bits(0x03 << 4)
+      delay(4200.micros) // >4100ms
+      write4Bits(0x03 << 4)
+      delay(160.micros) // >150us
+      write4Bits(0x02 << 4)
 
-        write4Bits(0x03 << 4)
-        delay(5)
-        write4Bits(0x03 << 4)
-        delay(5)
-        write4Bits(0x03 << 4)
-        delay(1)
-        write4Bits(0x02 << 4)
+      logger.info("LCD Function Set")
+      function()
 
-        function()
-        control()
-        clear()
-        mode()
-        home()
+      logger.info("Display Controls (display on, cursor)")
+      control()
 
-        delay(200)
-      }
+      logger.info("Clear Display")
+      clear()
+
+      logger.info("Entry Mode (left, shift decrement)")
+      mode()
+
+      logger.info("Return Home")
+      home()
+
+      // Enforce a long enough wait here before allowing any external updates
+      delay(200.millis)
+
+      logger.info("I2C display initialization complete.")
     }
   }
 
-  def shutdown(): Unit = fd foreach { fd =>
+  def shutdown(): Unit = i2c foreach { _ =>
     backlight = LCD_NOBACKLIGHT
     setCursor(0,0)
     printIIC(' ')
     clear()
-    delay(100)
+    delay(100.millis)
     write(LCD_NOBACKLIGHT)
-    delay(1000)
+    delay(1.second)
     displayOff()
-    delay(100)
+    delay(100.millis)
+
+    i2c = None
   }
 
   case class LcdUpdate(row: Int, col: Int, char: Char)
@@ -128,14 +163,14 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
     val newDisplay = generateDisplay()
 
     lines
-      .take(4)
+      .take(dimensions.rows)
       .zipWithIndex
       .map(x => x._1.map((_, x._2)))
       .filter(_.isDefined)
       .map(_.get)
       .foreach { case (line, row) =>
         line
-          .take(20)
+          .take(dimensions.columns)
           .zipWithIndex
           .foreach { case (char, col) =>
             newDisplay(row)(col) = Some(char)
@@ -155,34 +190,45 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
     updates
   }
 
-  def update(lines: List[Option[String]]): Unit = Future {
-    Try {
-      computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
-        if (Config.logOutput) {
-          logger.debug(s"Updating character: (${row}, ${col}) => '${char}'")
+  var updating = false
+
+  def update(lines: List[Option[String]]): Unit = synchronized {
+    if (updating) {
+      logger.warn("Update in progress. Skipping.")
+    } else {
+      updating = true
+
+      Try {
+        computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
+          if (Config.logDisplayUpdates) {
+            logger.debug(s"Updating character: (${row}, ${col}) => '${char}'")
+          }
+          setCursor(row, col)
+          printIIC(char)
         }
-        setCursor(row, col)
-        printIIC(char)
+      } match {
+        case Failure(error) => logger.error("Error updating clock", error)
+        case Success(_) =>
       }
-    } match {
-      case Failure(error) => logger.error("Error updating clock", error)
-      case Success(_) =>
+
+      updating = false
     }
   }
 
-  // Helper functions
-  def delay(millis: Long): Unit = Thread.sleep(millis)
+  def delay(duration: Duration): Unit = Timing.delaySync(duration)
 
-  def write(data: Int): Unit = fd foreach {
-    I2C.wiringPiI2CWrite(_, data | backlight)
+  def write(data: Int): Unit = i2c foreach { i =>
+    i.write(data | backlight)
   }
 
   def pulseEnable(data: Int): Unit = {
-    // Ignoring the required delays since the JVM should be plenty slow...
     write(data | ENABLE)
-    // delay >450ns
+    // delay >450ns (the JVM should be plenty slow)
+    delay(500.nanos)
+
     write(data & ~ENABLE)
-    // delay >450ns
+    // delay >37us (do we need to sleep here?)
+    delay(40.micros)
   }
 
   def write4Bits(data: Int): Unit = {
@@ -210,12 +256,12 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
 
   def clear(): Unit = {
     command(LCD_CLEARDISPLAY)
-    delay(2)
+    delay(2.millis)
   }
 
   def home(): Unit = {
     command(LCD_RETURNHOME)
-    delay(2)
+    delay(2.millis)
   }
 
   def setCursor(row: Int, column: Int): Unit = {
@@ -257,10 +303,6 @@ class Display(val dimensions: DisplayDimensions) extends LazyLogging {
   // Dynamic controls
   def scrollLeft(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT)
   def scrollRight(): Unit = command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT)
-}
-
-object Display {
-  def create(dimensions: DisplayDimensions): Display = new Display(dimensions)
 }
 
 sealed abstract class DisplayDimensions(val rows: Int, val columns: Int)

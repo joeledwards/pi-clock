@@ -37,8 +37,8 @@ object Time {
   def since(whence: Instant): Duration = diff(whence, now)
   def diff(start: Instant, end: Instant): Duration = {
     Duration(
-      java.time.Duration.between(start, end).toMillis,
-      TimeUnit.MILLISECONDS
+      java.time.Duration.between(start, end).toNanos,
+      TimeUnit.NANOSECONDS
     )
   }
   def thousandths(value: Number): String = s"${(value.intValue() % 1000) + 1000}".slice(1, 4)

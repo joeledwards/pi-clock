@@ -1,7 +1,8 @@
 package com.buzuli.clock
 
+import com.pi4j.context.Context
 import com.pi4j.io.gpio._
-import com.pi4j.io.gpio.event.{PinEvent, PinEventType, PinListener}
+import com.pi4j.io.gpio.digital.{DigitalInput, DigitalState, DigitalStateChangeListener}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.{Failure, Success, Try}
@@ -11,13 +12,15 @@ import scala.util.{Failure, Success, Try}
  * @param normallyClosed indicates whether
  */
 class Button(
+  val pi4jContext: Context,
   val pin: Int,
   val normallyClosed: Boolean
 ) extends LazyLogging {
   type ButtonEventHandler = ButtonEvent => Unit
 
   private var listeners: List[ButtonEventListener] = Nil
-  private var gpio: Option[GpioProvider] = None
+  private var buttonPin: Option[DigitalInput] = None
+  private var eventListener: Option[DigitalStateChangeListener] = None
 
   def onPress(handler: ButtonEventHandler): Unit = addListener(ButtonPressListener(handler))
   def onRelease(handler: ButtonEventHandler): Unit = addListener(ButtonReleaseListener(handler))
@@ -73,69 +76,59 @@ class Button(
   }
 
   def start(): Unit = this.synchronized {
-    Try {
-      gpio match {
-        case Some(_) =>
-        case None => {
-          gpio = Some(new RaspiGpioProvider(RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING))
-          val gpioPin: Pin = RaspiPin.getPinByAddress(pin)
+    buttonPin match {
+      case Some(_) =>
+      case None => {
+        buttonPin = Try {
+          val config = DigitalInput
+            .newConfigBuilder(pi4jContext)
+            .name("Display Button Pin")
+            .id("display-button-pin")
+            .address(pin)
+            .build
 
-          gpio.foreach { g =>
-            logger.info(s"Exporting pin ${pin} for digital input")
-            g.`export`(gpioPin, PinMode.DIGITAL_INPUT)
+          val input = pi4jContext.create(config)
+          logger.info(s"Adding listener for pin ${pin}")
 
-            val initialState = g.getState(gpioPin)
-            logger.info(s"Initial state for pin ${pin} is ${initialState.getValue} (${initialState.getName})")
-
-            val pinMode = g.getMode(gpioPin)
-            logger.info(s"Mode for pin ${pin} is ${pinMode.getValue} (${pinMode.getName})")
-
-            logger.info(s"Adding listener for pin ${pin}")
-            g.addListener(
-              gpioPin, new PinListener {
-                override def handlePinEvent(event: PinEvent): Unit = {
-                  Try {
-                    if (pin != event.getPin.getAddress)
-                      return
-                    if (event.getEventType != PinEventType.DIGITAL_STATE_CHANGE)
-                      return
-                    (normallyClosed, gpio.map(_.getState(event.getPin))) match {
-                      // Normally Closed
-                      case (true, Some(PinState.LOW)) => pressed()
-                      case (true, Some(PinState.HIGH)) => released()
-                      // Normally Open
-                      case (false, Some(PinState.HIGH)) => pressed()
-                      case (false, Some(PinState.LOW)) => released()
-                      // No pin configured
-                      case (_, None) =>
-                    }
-                  } match {
-                    case Failure(error) => {
-                      logger.error("Error routing button pin event", error)
-                    }
-                  }
-                }
+          eventListener = Some({
+            val listener: DigitalStateChangeListener = { pinEvent =>
+              (normallyClosed, pinEvent.state) match {
+                // Normally Closed
+                case (true, DigitalState.LOW) => pressed()
+                case (true, DigitalState.HIGH) => released()
+                // Normally Open
+                case (false, DigitalState.HIGH) => pressed()
+                case (false, DigitalState.LOW) => released()
               }
-            )
+            }
+
+            input.addListener(listener)
+
+            listener
+          })
+
+          input
+        } match {
+          case Success(di) => {
+            logger.info(s"GPIO initialization completed for button on pin ${pin}.")
+            Some(di)
+          }
+          case Failure(error) => {
+            logger.error("Error initializing GPIO for button", error)
+            None
           }
         }
-      }
-    } match {
-      case Success(_) => logger.info(s"GPIO initialization completed for button on pin ${pin}.")
-      case Failure(error) => {
-        logger.error("Error initializing GPIO for button", error)
       }
     }
   }
 
   def stop(): Unit = this.synchronized {
-    gpio foreach { _.removeAllListeners() }
-    gpio = None
-  }
-}
+    buttonPin.zip(eventListener) foreach {
+      case (pin, listener) => pin.removeListener(listener)
+    }
 
-object Button {
-  def create(pin: Int, normallyClosed: Boolean): Button = new Button(pin, normallyClosed)
+    buttonPin = None
+  }
 }
 
 trait ButtonEventListener {

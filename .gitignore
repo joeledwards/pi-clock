@@ -1,3 +1,9 @@
-target/
 *.jar
+.bloop/
+.bsp/
 .idea/
+.metals/
+.vscode/
+project/project/
+project/metals.sbt
+target/

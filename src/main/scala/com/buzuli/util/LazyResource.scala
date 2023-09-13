@@ -6,8 +6,8 @@ import scala.util.{Failure, Success}
 /**
  * This class represents a resources which is lazily initialized.
  *
- * @param initializer a function which attempts to provide initialize the value asynchronously
- * @param resetOnFailure if this is set to true, then subsequent attempts to call get() will restart initialization
+ * @param initializer a function which attempts to initialize the value asynchronously
+ * @param resetOnFailure if this is set to true, subsequent attempts to call get() will restart initialization
  */
 class LazyResource[T](
   initializer: () => Future[T],

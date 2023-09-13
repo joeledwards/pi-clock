@@ -10,7 +10,20 @@ import scala.concurrent.duration.Duration
  * is requested. An asynchronous version will refresh in the background.
  */
 trait Koozie[T] {
+  /**
+   * @return the value or refresh it if missing or stale
+   */
   def value: Option[T]
+
+  /**
+   * @return the contained value without refreshing it
+   */
+  def stale: Option[T]
+
+  /**
+   * @return the value, forcing a refresh
+   */
+  def fresh: Option[T]
 }
 
 class SyncKoozie[T](
@@ -21,6 +34,9 @@ class SyncKoozie[T](
   private var lastRefresh: Option[Instant] = None
   private var _value: Option[T] = if (eager) refresh() else None
   override def value: Option[T] = maybeRefresh { _value }
+  override def stale: Option[T] = _value
+  override def fresh: Option[T] = refresh
+  
   private def now: Instant = Instant.now
 
   private def refresh(): Option[T] = {

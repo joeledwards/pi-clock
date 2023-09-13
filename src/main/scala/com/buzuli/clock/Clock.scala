@@ -30,7 +30,7 @@ class Clock extends LazyLogging {
             scheduler.runEvery(
               Duration(1, TimeUnit.SECONDS)
             ) {
-              if (Config.logOutput) {
+              if (Config.logDisplayUpdates) {
                 logger.info(s"Clock tick @ ${Time.nowUtcIso}")
               }
               notifyListeners()

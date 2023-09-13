@@ -4,21 +4,8 @@ import com.buzuli.util.Env
 
 import scala.concurrent.duration._
 
-sealed trait RunMode
-case object ClockMode extends RunMode
-case object WeatherStationMode extends RunMode
-
-object RunMode {
-  def of(mode: String): Option[RunMode] = mode match {
-    case "weather-station" => Some(WeatherStationMode)
-    case _ => Some(ClockMode)
-  }
-}
-
 object Config {
   lazy val checkIntegrity: Boolean = Env.getToggle("PI_CLOCK_CHECK_INTEGRITY").getOrElse(false)
-  lazy val i2cAddress: Int = Env.getInt("PI_CLOCK_I2C_ADDRESS").getOrElse(0)
-  lazy val logOutput: Boolean = Env.getToggle("PI_CLOCK_LOG_OUTPUT").getOrElse(false)
 
   lazy val buttonPin: Option[Int] = Env.getInt("PI_CLOCK_BUTTON_PIN")
   lazy val buttonEnabled: Boolean = Env.getToggle("PI_CLOCK_BUTTON_ENABLED").getOrElse(false)
@@ -39,6 +26,10 @@ object Config {
   lazy val humanFriendly: Boolean = Env.getToggle("PI_CLOCK_HUMAN_FRIENDLY").getOrElse(false)
   lazy val binary: Boolean = Env.getToggle("PI_CLOCK_BINARY").getOrElse(false)
 
+  lazy val i2cBusForDisplay: Int = Env.getInt("PI_CLOCK_I2C_BUS_FOR_DISPLAY").getOrElse(0)
+  lazy val i2cDeviceForDisplay: Int = Env.getInt("PI_CLOCK_I2C_DEVICE_FOR_DISPLAY").getOrElse(0)
+  lazy val logDisplayUpdates: Boolean = Env.getToggle("PI_CLOCK_LOG_DISPLAY_UPDATES").getOrElse(false)
+  lazy val logTimingInfo: Boolean = Env.getToggle("PI_CLOCK_LOG_TIMING_INFO").getOrElse(false)
   lazy val displayEnabled: Boolean = Env.getToggle("PI_CLOCK_DISPLAY_ENABLED").getOrElse(false)
   lazy val displayDimensions: DisplayDimensions = {
     Env.getAs("PI_CLOCK_DISPLAY_DIMENSIONS") {
@@ -47,6 +38,4 @@ object Config {
       Display20x4
     }
   }
-
-  lazy val runMode: RunMode = Env.getAs("PI_CLOCK_RUN_MODE") { RunMode.of } getOrElse { ClockMode }
 }

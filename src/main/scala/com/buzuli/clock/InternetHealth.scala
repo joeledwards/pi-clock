@@ -2,19 +2,21 @@ package com.buzuli.clock
 
 import java.time.Instant
 import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
-import com.pi4j.io.gpio.{Pin, PinMode, PinState, RaspiGpioProvider, RaspiPin, RaspiPinNumberingScheme}
+import com.pi4j.context.Context
+import com.pi4j.io.gpio.digital.{DigitalOutput, DigitalState}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 sealed trait Outage
 case object InternetOutage extends Outage
 case object LocalNetworkOutage extends Outage
 
-class InternetHealth extends LazyLogging {
+class InternetHealth(pi4jContext: Context) extends LazyLogging {
   private implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val scheduler: Scheduler = Scheduler.create()
   private var scheduled: Option[Scheduled] = None
@@ -23,41 +25,39 @@ class InternetHealth extends LazyLogging {
   private var internetDownSince: Option[Instant] = None
   private var lastPowerCycleTime: Option[Instant] = None
 
-  private lazy val gpio: Option[RaspiGpioProvider] = {
-    Some(new RaspiGpioProvider(
-      RaspiPinNumberingScheme.BROADCOM_PIN_NUMBERING
-    ))
-  }
-  private val gpioPin: Option[Pin] = Config.internetPowerPin flatMap { pinAddress =>
-    Option(RaspiPin.getPinByAddress(pinAddress)) match {
-      case None => {
+  private val resetPin: Option[DigitalOutput] = Config.internetPowerPin flatMap { pinAddress =>
+    val pin = Try {
+      DigitalOutput
+        .newBuilder(pi4jContext)
+        .name("Internet Reset Pin")
+        .id("internet-reset-pin")
+        .address(pinAddress)
+        .build
+    } match {
+      case Success(p) => {
+        logger.info(s"Initializing the Internet reset pin: ${p}")
+        Scheduler.default.runAfter(1.second) {
+          Config.internetPowerHigh match {
+            case true => p.high()
+            case false => p.low()
+          }
+        }
+        Some(p)
+      }
+      case Failure(_) => {
         logger.info(s"No valid reset pin supplied: ${pinAddress}")
         None
       }
-      case Some(pin) => {
-        logger.info(s"Initializing the Internet reset pin: ${pin}")
-        Scheduler.default.runAfter(1.second) {
-          // This must be run after gpioPin has been assigned a value
-          gpio.foreach { g =>
-            powerOn()
-            g.`export`(
-              pin,
-              PinMode.DIGITAL_OUTPUT,
-              if (Config.internetPowerHigh) PinState.HIGH else PinState.LOW
-            )
-          }
-        }
-        Some(pin)
-      }
     }
+    pin
   }
 
   def isNetworkDown: Boolean = networkDownSince.nonEmpty
   def isInternetDown: Boolean = internetDownSince.nonEmpty
 
-  def setHigh(): Unit = gpioPin foreach { pin =>
+  def setHigh(): Unit = resetPin foreach { pin =>
     Try {
-      gpio.foreach { _.setState(pin, PinState.HIGH) }
+      pin.high()
     } match {
       case Success(_) =>
       case Failure(error) => {
@@ -66,9 +66,9 @@ class InternetHealth extends LazyLogging {
     }
   }
 
-  def setLow(): Unit = gpioPin foreach { pin =>
+  def setLow(): Unit = resetPin foreach { pin =>
     Try {
-      gpio.foreach { _.setState(pin, PinState.LOW) }
+      pin.low()
     } match {
       case Success(_) =>
       case Failure(error) =>
@@ -76,24 +76,19 @@ class InternetHealth extends LazyLogging {
     }
   }
 
+  def resetPower(): Unit = resetPin foreach { pin =>
+    val pulseDirection = if (Config.internetPowerHigh) DigitalState.LOW else DigitalState.HIGH
+    pin.pulse(1, TimeUnit.SECONDS, pulseDirection)
+  }
+
   def powerOn(): Unit = if (Config.internetPowerHigh) setHigh() else setLow()
 
   def powerOff(): Unit = if (Config.internetPowerHigh) setLow() else setHigh()
 
   def resetInternet(): Unit = {
-    gpioPin.foreach { _ =>
-      lastPowerCycleTime = Some(Time.now)
-
-      logger.info("Cutting Internet power ...")
-      powerOff()
-      logger.info("Power is off.")
-
-      Scheduler.default.runAfter(1.second) {
-        logger.info("Restoring Internet power ...")
-        powerOn()
-        logger.info("Power is on.")
-      }
-    }
+    logger.info("Pulsing Internet power to reset ...")
+    resetPower()
+    logger.info("Internet reset.")
   }
 
   val monitors: List[ServiceMonitor] = {
