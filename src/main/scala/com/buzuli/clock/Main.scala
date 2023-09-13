@@ -1,7 +1,7 @@
 package com.buzuli.clock
 
 import java.time.{ZoneId, ZoneOffset}
-import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Timing}
+import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
@@ -50,14 +50,38 @@ object Main extends App with LazyLogging {
   logger.info("Testing delays ...")
 
   val tnt = Timing.samples(1000) { System.nanoTime }
-  val tms = Timing.samples(1000) { System.currentTimeMillis }
-  val td0 = Timing.samples(1000) { Timing.delaySync(Duration.Zero) }
-  val td1 = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
-
   logger.info(s"System.nanoTime => ${tnt}")
+
+  val tms = Timing.samples(1000) { System.currentTimeMillis }
   logger.info(s"System.currentTimeMillis => ${tms}")
-  logger.info(s"delaySync(0) => ${td0}")
-  logger.info(s"delaySync(1ms) => ${td1}")
+
+  val tdz = Timing.samples(1000) { Timing.delaySync(Duration.Zero) }
+  logger.info(s"delaySync(0) => ${tdz}")
+
+  val tdu = Timing.samples(1000) { Timing.delaySync(Duration(10, TimeUnit.MICROSECONDS)) }
+  logger.info(s"delaySync(1ms) => ${tdu}")
+
+  val tdm = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
+  logger.info(s"delaySync(1ms) => ${tdm}")
+
+  List(
+    Duration(1, TimeUnit.NANOSECONDS),
+    Duration(100, TimeUnit.NANOSECONDS),
+
+    Duration(5, TimeUnit.MICROSECONDS),
+    Duration(200, TimeUnit.MICROSECONDS),
+    Duration(499, TimeUnit.MICROSECONDS),
+    Duration(500, TimeUnit.MICROSECONDS),
+    Duration(999, TimeUnit.MICROSECONDS),
+
+    Duration(1, TimeUnit.MILLISECONDS),
+    Duration(20, TimeUnit.MILLISECONDS),
+  ) foreach { delay =>
+    val (_, actual) = Timing.sample {
+      Timing.delaySync(delay)
+    }
+    logger.info(s"Timing.delaySync: expected=${Time.prettyDuration(delay)} actual=${Time.prettyDuration(actual)}")
+  }
 
   val button: Option[Button] = (Config.buttonEnabled, Config.buttonPin) match {
     case (true, Some(pin)) => pi4jContext.value.map(new Button(_, pin, Config.buttonNormallyClosed))
@@ -108,7 +132,10 @@ object Main extends App with LazyLogging {
       }
 
       if (Config.displayEnabled) {
-        display.foreach(_.update(lines))
+        val (_ , duration) = Timing.sample {
+          display.foreach(_.update(lines))
+        }
+        logger.info(s"Display update took ${Time.prettyDuration(duration)}")
       }
     }
   }

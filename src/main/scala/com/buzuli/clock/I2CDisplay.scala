@@ -191,18 +191,28 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     updates
   }
 
-  def update(lines: List[Option[String]]): Unit = Future {
-    Try {
-      computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
-        if (Config.logDisplayUpdates) {
-          logger.debug(s"Updating character: (${row}, ${col}) => '${char}'")
+  var updating = false
+
+  def update(lines: List[Option[String]]): Unit = synchronized {
+    if (updating) {
+      logger.warn("Update in progress. Skipping.")
+    } else {
+      updating = true
+
+      Try {
+        computeUpdates(lines) foreach { case LcdUpdate(row, col, char) =>
+          if (Config.logDisplayUpdates) {
+            logger.debug(s"Updating character: (${row}, ${col}) => '${char}'")
+          }
+          setCursor(row, col)
+          printIIC(char)
         }
-        setCursor(row, col)
-        printIIC(char)
+      } match {
+        case Failure(error) => logger.error("Error updating clock", error)
+        case Success(_) =>
       }
-    } match {
-      case Failure(error) => logger.error("Error updating clock", error)
-      case Success(_) =>
+
+      updating = false
     }
   }
 
@@ -219,7 +229,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
     write(data & ~ENABLE)
     // delay >37us (do we need to sleep here?)
-    System.currentTimeMillis()
+    delay(0)
   }
 
   def write4Bits(data: Int): Unit = {

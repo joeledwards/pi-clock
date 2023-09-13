@@ -57,5 +57,18 @@ object Timing {
     )
   }
 
-  def delaySync(duration: Duration): Unit = Thread.sleep(duration.toMillis)
+  def delaySync(duration: Duration): Unit = {
+    val start = System.nanoTime
+    var remaining = duration.toNanos
+
+    while (remaining > 0) {
+      remaining match {
+        case sd if sd >= 500000 => Thread.sleep(sd / 1000000L, (sd % 1000000L).toInt)
+        case nd if nd > 10000 => Thread.sleep(0)
+        case _ => System.nanoTime
+      }
+
+      remaining = duration.toNanos - (System.nanoTime - start)
+    }
+  }
 }
