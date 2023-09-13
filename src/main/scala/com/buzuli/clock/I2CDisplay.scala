@@ -3,8 +3,6 @@ package com.buzuli.clock
 import com.buzuli.util.Timing
 import com.pi4j.context.Context
 import com.pi4j.io.i2c.{I2C, I2CProvider}
-import com.pi4j.library.pigpio.PiGpio
-import com.pi4j.plugin.pigpio.provider.i2c.PiGpioI2CProvider
 import com.typesafe.scalalogging.LazyLogging
 
 import java.util.concurrent.TimeUnit
@@ -87,7 +85,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
         .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
-        .provider(PiGpioI2CProvider.ID)
+        .provider("linuxfs-i2c")
         .build
 
       logger.info("Creating I2C Object ...")
