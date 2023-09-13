@@ -59,7 +59,7 @@ object Main extends App with LazyLogging {
   logger.info(s"delaySync(0) => ${tdz}")
 
   val tdu = Timing.samples(1000) { Timing.delaySync(Duration(10, TimeUnit.MICROSECONDS)) }
-  logger.info(s"delaySync(1ms) => ${tdu}")
+  logger.info(s"delaySync(10us) => ${tdu}")
 
   val tdm = Timing.samples(1000) { Timing.delaySync(Duration(1, TimeUnit.MILLISECONDS)) }
   logger.info(s"delaySync(1ms) => ${tdm}")
