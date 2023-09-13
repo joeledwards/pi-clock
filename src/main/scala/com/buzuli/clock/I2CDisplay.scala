@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.language.postfixOps
 
+import scala.concurrent.duration._
 
 class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyLogging {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -106,19 +107,19 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     i2c foreach { _ =>
       logger.info("Initializing the I2C display ...")
       
-      delay(50) // > 40ms
+      delay(50.millis) // > 40ms
 
       logger.info("Enabling the backlight")
       write(backlight)
-      delay(1000)
+      delay(1.second)
 
       logger.info("Setting 4-bit mode")
       write4Bits(0x03 << 4)
-      delay(5) // >4100us
+      delay(4200.micros) // >4100us
       write4Bits(0x03 << 4)
-      delay(5) // >4100ms
+      delay(4200.micros) // >4100ms
       write4Bits(0x03 << 4)
-      delay(1) // >150us
+      delay(160.micros) // >150us
       write4Bits(0x02 << 4)
 
       logger.info("LCD Function Set")
@@ -137,7 +138,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
       home()
 
       // Enforce a long enough wait here before allowing any external updates
-      delay(200)
+      delay(200.millis)
 
       logger.info("I2C display initialization complete.")
     }
@@ -148,11 +149,11 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     setCursor(0,0)
     printIIC(' ')
     clear()
-    delay(100)
+    delay(100.millis)
     write(LCD_NOBACKLIGHT)
-    delay(1000)
+    delay(1.second)
     displayOff()
-    delay(100)
+    delay(100.millis)
 
     i2c = None
   }
@@ -216,7 +217,7 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
     }
   }
 
-  def delay(millis: Long): Unit = Timing.delaySync(Duration(millis, TimeUnit.MILLISECONDS))
+  def delay(duration: Duration): Unit = Timing.delaySync(duration)
 
   def write(data: Int): Unit = i2c foreach { i =>
     i.write(data | backlight)
@@ -225,11 +226,11 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
   def pulseEnable(data: Int): Unit = {
     write(data | ENABLE)
     // delay >450ns (the JVM should be plenty slow)
-    System.nanoTime()
+    delay(500.nanos)
 
     write(data & ~ENABLE)
     // delay >37us (do we need to sleep here?)
-    delay(0)
+    delay(40.micros)
   }
 
   def write4Bits(data: Int): Unit = {
@@ -257,12 +258,12 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
   def clear(): Unit = {
     command(LCD_CLEARDISPLAY)
-    delay(2)
+    delay(2.millis)
   }
 
   def home(): Unit = {
     command(LCD_RETURNHOME)
-    delay(2)
+    delay(2.millis)
   }
 
   def setCursor(row: Int, column: Int): Unit = {
