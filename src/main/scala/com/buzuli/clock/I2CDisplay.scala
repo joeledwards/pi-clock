@@ -79,13 +79,17 @@ class I2CDisplay(pi4j: Context, val dimensions: DisplayDimensions) extends LazyL
 
   def init(): Unit = {
     i2c = Try {
+      // The pigpio-i2c provider was broken last time I tried to use it.
+      // The linuxfs-i2c works well, and is fast enough display updates.
+      val i2cProvider = "linuxfs-i2c"
+
       logger.info("Creating I2C Config ...")
       val i2cConfig = I2C.newConfigBuilder(pi4j)
         .name("display")
         .id("display")
         .bus(Config.i2cBusForDisplay)
         .device(Config.i2cDeviceForDisplay)
-        .provider("linuxfs-i2c")
+        .provider(i2cProvider)
         .build
 
       logger.info("Creating I2C Object ...")
