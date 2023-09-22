@@ -5,6 +5,15 @@ import com.buzuli.util.{Strings, SysInfo}
 import java.time.{Instant, ZoneId, ZoneOffset}
 
 object DisplayContent {
+  private var customLines: Option[List[Option[String]]] = None
+
+  /**
+    * Set custom lines to display.
+    *
+    * @param List the lines to write to the display (will be truncated to fit)
+    */
+  def setCustomLines(lines: Option[List[Option[String]]]): Unit = customLines = lines
+
   def getDisplayLines(
     timestamp: Instant,
     internetHealth: Option[InternetHealth],
@@ -17,6 +26,20 @@ object DisplayContent {
   }
 
   private def getLinesFor20x4(timestamp: Instant, internetHealth: Option[InternetHealth]): List[Option[String]] = {
+    customLines match {
+      case Some(lines) => lines.take(4).map(_.map(_.take(20)))
+      case None => generateLinesFor20x4(timestamp, internetHealth)
+    }
+  }
+
+  private def getLinesFor16x2(timestamp: Instant, displayContent: DisplayContent): List[Option[String]] = {
+    customLines match {
+      case Some(lines) => lines.take(2).map(_.map(_.take(16)))
+      case None => generateLinesFor16x2(timestamp, displayContent)
+    }
+  }
+
+  private def generateLinesFor20x4(timestamp: Instant, internetHealth: Option[InternetHealth]): List[Option[String]] = {
     val tsLocal = timestamp.atZone(ZoneId.systemDefault)
     val tsUtc = timestamp.atZone(ZoneOffset.UTC)
 
@@ -69,7 +92,7 @@ object DisplayContent {
       Nil
   }
 
-  private def getLinesFor16x2(timestamp: Instant, displayContent: DisplayContent): List[Option[String]] = {
+  private def generateLinesFor16x2(timestamp: Instant, displayContent: DisplayContent): List[Option[String]] = {
     val tsLocal = timestamp.atZone(ZoneId.systemDefault)
     val tsUtc = timestamp.atZone(ZoneOffset.UTC)
     val utcTimeString = s"${tsUtc.toString.slice(0, 16).replace('T', ' ')}"

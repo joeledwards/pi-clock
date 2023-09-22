@@ -38,4 +38,5 @@ object Config {
       Display20x4
     }
   }
+  lazy val customDisplayFilePath: Option[String] = Env.get("PI_CLOCK_CUSTOM_DISPLAY_FILE_PATH")
 }

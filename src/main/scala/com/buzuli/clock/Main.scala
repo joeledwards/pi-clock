@@ -1,5 +1,6 @@
 package com.buzuli.clock
 
+import java.nio.file.WatchService
 import java.time.{ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
 import com.pi4j.Pi4J
@@ -113,6 +114,19 @@ object Main extends App with LazyLogging {
   clock.foreach(_.start())
   button.foreach(_.start())
   checkInternet.foreach(_.start())
+
+  if (Config.customDisplayFilePath.nonEmpty) {
+    // TODO: watch for changes and reload
+    //val watch = new WatchService
+    //watch.
+    DisplayContent.setCustomLines(Some(List(
+      Some("1. uno"),
+      Some("2. dos"),
+      Some("3. tres"),
+      Some("4. quatro"),
+    )))
+  }
+
 
   logger.info("Running ...")
 
