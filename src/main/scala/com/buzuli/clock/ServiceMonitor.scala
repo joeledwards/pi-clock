@@ -1,6 +1,14 @@
 package com.buzuli.clock
 
-import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
+import com.buzuli.util.{
+  Http, HttpResult,
+  HttpResultInvalidBody,
+  HttpResultInvalidHeader,
+  HttpResultInvalidMethod,
+  HttpResultInvalidUrl,
+  HttpResultRawResponse,
+  Scheduled, Scheduler, Time
+}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.time.Instant

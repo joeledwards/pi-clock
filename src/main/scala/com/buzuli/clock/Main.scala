@@ -1,16 +1,13 @@
 package com.buzuli.clock
 
-import java.nio.file.{FileSystems, Files, Path, Paths, WatchService}
-import java.time.{Instant, ZoneId, ZoneOffset}
+import java.nio.file.{Files, Paths}
+import java.time.Instant
 import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
 
-import java.io.File
-import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.List
 import scala.concurrent.duration.Duration
 import scala.io.Source
 import scala.language.postfixOps

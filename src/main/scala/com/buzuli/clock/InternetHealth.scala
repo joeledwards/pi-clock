@@ -1,13 +1,13 @@
 package com.buzuli.clock
 
 import java.time.Instant
-import com.buzuli.util.{Http, HttpResult, HttpResultInvalidBody, HttpResultInvalidHeader, HttpResultInvalidMethod, HttpResultInvalidUrl, HttpResultRawResponse, Scheduled, Scheduler, Time}
+import com.buzuli.util.{Scheduled, Scheduler, Time}
 import com.pi4j.context.Context
 import com.pi4j.io.gpio.digital.{DigitalOutput, DigitalState}
 import com.typesafe.scalalogging.LazyLogging
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}

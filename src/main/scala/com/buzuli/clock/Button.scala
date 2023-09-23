@@ -1,7 +1,6 @@
 package com.buzuli.clock
 
 import com.pi4j.context.Context
-import com.pi4j.io.gpio._
 import com.pi4j.io.gpio.digital.{DigitalInput, DigitalState, DigitalStateChangeListener}
 import com.typesafe.scalalogging.LazyLogging
 

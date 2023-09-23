@@ -1,7 +1,6 @@
 package com.buzuli.util
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 object Timing {

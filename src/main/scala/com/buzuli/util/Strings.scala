@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.charset.Charset
 import java.io.PrintStream
 import java.io.ByteArrayOutputStream
-import java.io.OutputStreamWriter
 
 object Strings {
   def padLeft(pad: Char, minLength: Int)(text: String): String = {
