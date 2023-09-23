@@ -1,14 +1,19 @@
 package com.buzuli.clock
 
-import java.nio.file.WatchService
+import java.nio.file.{FileSystems, Files, Path, Paths, WatchService}
 import java.time.{ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
 
+import java.io.File
 import java.util.concurrent.TimeUnit
+import scala.collection.immutable.List
 import scala.concurrent.duration.Duration
+import scala.io.Source
+import scala.language.postfixOps
+import scala.util.Try
 
 object Main extends App with LazyLogging {
   if (Config.checkIntegrity) {
@@ -72,11 +77,40 @@ object Main extends App with LazyLogging {
     case false => DisplayUtcAndHost
   }
 
+  val customDisplayLines: Option[Koozie[List[Option[String]]]] = {
+    Config.customDisplayFilePath map { p =>
+      val path = Paths.get(p)
+      Koozie.sync(
+        ({
+          val lines: Option[List[Option[String]]] = {
+            if (Files.exists(path)) {
+                Try {
+                  Source
+                    .fromFile(path.toFile)
+                    .getLines
+                    .toList
+                    .map(l => if (l.nonEmpty) Some(l) else None)
+                } toOption
+            } else {
+              None
+            }
+          }
+
+          lines
+        }),
+        Some(Duration(1, TimeUnit.SECONDS))
+      )
+    }
+  }
+
+
   // Configure display output on each tick of the clock
   clock.foreach { clk =>
     logger.info("Initializing the clock ...")
 
     clk.onTick { timestamp =>
+      customDisplayLines.foreach(l => DisplayContent.setCustomLines(l.fresh))
+
       val lines: List[Option[String]] = DisplayContent.getDisplayLines(timestamp, checkInternet, displayContent)
 
       if (Config.logDisplayUpdates) {
@@ -114,19 +148,6 @@ object Main extends App with LazyLogging {
   clock.foreach(_.start())
   button.foreach(_.start())
   checkInternet.foreach(_.start())
-
-  if (Config.customDisplayFilePath.nonEmpty) {
-    // TODO: watch for changes and reload
-    //val watch = new WatchService
-    //watch.
-    DisplayContent.setCustomLines(Some(List(
-      Some("1. uno"),
-      Some("2. dos"),
-      Some("3. tres"),
-      Some("4. quatro"),
-    )))
-  }
-
 
   logger.info("Running ...")
 
