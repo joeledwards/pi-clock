@@ -26,6 +26,7 @@ You can use environment variables to configure the application:
 - `PI_CLOCK_BUTTON_ENABLED` : Should the control button be enabled (default: `false`)
 - `PI_CLOCK_BUTTON_PIN` : The pin associated with the control button (cycles display mode)
 - `PI_CLOCK_BUTTON_NC` : Is the button normally-closed (default: `false`)
+- `PI_CLOCK_CUSTOM_DISPLAY_FILE_PATH` : Load custom display lines from this file.
 - `PI_CLOCK_INTERNET_HEALTH_CHECK` : Should the device perform regular Internet health checks (default: `false`)
 - `PI_CLOCK_INTERNET_POWER_PIN` : The GPIO pin to which the power relay is connected
 - `PI_CLOCK_INTERNET_POWER_HIGH` : Power is on when the power pin is pulled high (default: `false`)
