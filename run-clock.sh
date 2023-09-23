@@ -21,6 +21,7 @@ export PI_CLOCK_INTERNET_RESET_DELAY="" #-------# Minimum delay between Internet
 export PI_CLOCK_HEALTH_SLACK_WEBHOOK="" #-------# Slack webhook for health checks.
 export PI_CLOCK_SENSE_HAT_INSTALLED=no  #-------# Sense-hat system is installed (default: `false`)
 export PI_CLOCK_NOTIFICATION_SLACK_WEBHOOK="" # # Slack webhook for notifications.
+export PI_CLOCK_CUSTOM_DISPLAY_FILE_PATH="display.txt" # Custom display content
 
 jar_path="./pi-clock-2.0.0.jar"
 
