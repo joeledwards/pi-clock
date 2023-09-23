@@ -1,13 +1,14 @@
 package com.buzuli.clock
 
 import java.nio.file.{FileSystems, Files, Path, Paths, WatchService}
-import java.time.{ZoneId, ZoneOffset}
+import java.time.{Instant, ZoneId, ZoneOffset}
 import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
 
 import java.io.File
+import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 import scala.collection.immutable.List
 import scala.concurrent.duration.Duration
@@ -77,32 +78,7 @@ object Main extends App with LazyLogging {
     case false => DisplayUtcAndHost
   }
 
-  val customDisplayLines: Option[Koozie[List[Option[String]]]] = {
-    Config.customDisplayFilePath map { p =>
-      val path = Paths.get(p)
-      Koozie.sync(
-        ({
-          val lines: Option[List[Option[String]]] = {
-            if (Files.exists(path)) {
-                Try {
-                  Source
-                    .fromFile(path.toFile)
-                    .getLines
-                    .toList
-                    .map(l => if (l.nonEmpty) Some(l) else None)
-                } toOption
-            } else {
-              None
-            }
-          }
-
-          lines
-        }),
-        Some(Duration(1, TimeUnit.SECONDS))
-      )
-    }
-  }
-
+  val customDisplayLines: Option[Koozie[List[Option[String]]]] = customDisplayLineSource
 
   // Configure display output on each tick of the clock
   clock.foreach { clk =>
@@ -201,6 +177,44 @@ object Main extends App with LazyLogging {
       logger.info(s"Timing.delaySync: expected=${Time.prettyDuration(delay)} actual=${Time.prettyDuration(actual)}")
     }
   }
+
+  var lastLoadedFileModificationTime: Option[Instant] = None
+  def customDisplayLineSource: Option[Koozie[List[Option[String]]]] = {
+      Config.customDisplayFilePath map { p =>
+        val path = Paths.get(p)
+        Koozie.sync(
+          {
+            val (lines, lastLoadTime) = Try(
+              Files.getLastModifiedTime(path)
+            ).toOption.filter({ mTime =>
+              !lastLoadedFileModificationTime.exists(_.isAfter(mTime.toInstant))
+            }).flatMap({ mTime =>
+              Try {
+                val fileContent = Source
+                  .fromFile(path.toFile)
+                  .getLines
+                  .toList
+                  .map(l => if (l.nonEmpty) Some(l) else None)
+
+                (fileContent, mTime.toInstant)
+              } toOption
+            }) match {
+              case None =>
+                println("File does not exist")
+                (None, None)
+              case Some((l, t)) =>
+                println(s"File loaded (m-time of ${t}")
+                (Some(l), Some(t))
+            }
+
+            lastLoadedFileModificationTime = lastLoadTime
+
+            lines
+          },
+          Some(Duration(1, TimeUnit.SECONDS))
+        )
+      }
+    }
 
   def logContextInfo(context: Context): Unit = {
     logger.debug(s"""Pi4J 2 Platforms:
