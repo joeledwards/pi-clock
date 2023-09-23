@@ -2,7 +2,7 @@ package com.buzuli.clock
 
 import java.nio.file.{Files, Paths}
 import java.time.Instant
-import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing}
+import com.buzuli.util.{Http, Koozie, Strings, SysInfo, Time, Timing, Types}
 import com.pi4j.Pi4J
 import com.pi4j.context.Context
 import com.typesafe.scalalogging.LazyLogging
@@ -181,28 +181,23 @@ object Main extends App with LazyLogging {
         val path = Paths.get(p)
         Koozie.sync(
           {
-            val (lines, lastLoadTime) = Try(
-              Files.getLastModifiedTime(path)
-            ).toOption.filter({ mTime =>
-              !lastLoadedFileModificationTime.exists(_.isAfter(mTime.toInstant))
-            }).flatMap({ mTime =>
-              Try {
-                val fileContent = Source
-                  .fromFile(path.toFile)
-                  .getLines
-                  .toList
-                  .map(l => if (l.nonEmpty) Some(l) else None)
+            val (lines, lastLoadTime) = Types.option.unzip(
+              Try(
+                Files.getLastModifiedTime(path)
+              ).toOption.filter(mTime =>
+                !lastLoadedFileModificationTime.exists(_.isAfter(mTime.toInstant))
+              ).flatMap({ mTime =>
+                Try {
+                  val fileContent = Source
+                    .fromFile(path.toFile)
+                    .getLines
+                    .toList
+                    .map(l => if (l.nonEmpty) Some(l) else None)
 
-                (fileContent, mTime.toInstant)
-              } toOption
-            }) match {
-              case None =>
-                println("File does not exist")
-                (None, None)
-              case Some((l, t)) =>
-                println(s"File loaded (m-time of ${t}")
-                (Some(l), Some(t))
-            }
+                  (fileContent, mTime.toInstant)
+                } toOption
+              })
+            )
 
             lastLoadedFileModificationTime = lastLoadTime
 
