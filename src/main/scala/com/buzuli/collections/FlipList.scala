@@ -2,41 +2,35 @@ package com.buzuli.collections
 
 /**
 
-class FlipListNode[T](val value: T, l: FlipList[T]) {
-  def list: Option[FlipList[T]] = ???
+// Minimal
 
-  def left: Option[FlipListNode[T]] = ???
-  def right: Option[FlipListNode[T]] = ???
+ class FlipListNode[T](val value: T, l: FlipList[T]) {
+   def list: Option[FlipList[T]] = ???
 
-  def next: Option[FlipListNode[T]] = right
-  def prev: Option[FlipListNode[T]] = left
+   def left: Option[FlipListNode[T]] = ???
+   def right: Option[FlipListNode[T]] = ???
 
-  def addToLeft(value: T): FlipListNode[T] = ???
-  def addToRight(value: T): FlipListNode[T] = ???
-  def remove(): FlipList[T] = ???
-  def isInList: Boolean = ???
-}
+   def addToLeft(value: T): FlipListNode[T] = ???
+   def addToRight(value: T): FlipListNode[T] = ???
 
-class FlipList[T] {
-  def left: Option[FlipListNode[T]] = ???
-  def right: Option[FlipListNode[T]] = ???
+   def remove(): FlipList[T] = ???
+ }
 
-  def head: Option[FlipListNode[T]] = left
-  def tail: Option[FlipListNode[T]] = right
+ class FlipList[T] {
+   def flip(): FlipList[T] = ???
 
-  def flip(): FlipList[T] = ???
-  def isFlipped: Boolean = ???
+   def left: Option[FlipListNode[T]] = ???
+   def right: Option[FlipListNode[T]] = ???
 
-  def pushLeft(value: T): Option[FlipListNode[T]] = ???
-  def pushRight(value: T): Option[FlipListNode[T]] = ???
-  def popLeft(value: T): Option[T] = ???
-  def popRight(value: T): Option[T] = ???
+   def pushLeft(value: T): Option[FlipListNode[T]] = ???
+   def pushRight(value: T): Option[FlipListNode[T]] = ???
 
-  def isEmpty: Boolean = ???
-  def iterator: Iterator[T] = ???
+   def popLeft(value: T): Option[T] = ???
+   def popRight(value: T): Option[T] = ???
 
-  def foreach(observer: T => Unit): Unit = iterator.foreach(observer)
-}
+   def isEmpty: Boolean = ???
+   def iterator: Iterator[T] = ???
+ }
 
 */
 
@@ -234,6 +228,9 @@ class FlipList[T] {
     }
   }
 
+  def push(value: T): FlipListNode[T] = pushLeft(value)
+  def enqueue(value: T): FlipListNode[T] = pushRight(value)
+
   /**
    * Remove and return the left-most value if the list was non-empty.
    *
@@ -267,6 +264,9 @@ class FlipList[T] {
     }
     case _ => None
   }
+
+  def pop(): Option[T] = popLeft()
+  def dequeue(): Option[T] = popLeft()
 
   /**
    * @return An [[Iterator]] over the values in the list.

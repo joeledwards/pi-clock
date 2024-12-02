@@ -126,4 +126,92 @@ class FlipListSpec extends UnitSpec {
       }
     }
   }
+
+  "used as a stack" should {
+    "honor isFlipped state when push() is called" in {
+      Some(FlipList[String]()) foreach { l =>
+        l.push("a")
+        l.flip()
+        l.push("b")
+        l.flip()
+        l.push("c")
+        l.flip()
+        l.push("d")
+        l.flip()
+        l.push("e")
+
+        l.pop() shouldBe Some("e")
+        l.pop() shouldBe Some("c")
+        l.pop() shouldBe Some("a")
+        l.pop() shouldBe Some("b")
+        l.pop() shouldBe Some("d")
+        l.pop() shouldBe None
+      }
+    }
+
+    "honor isFlipped state when pop() is called" in {
+      Some(FlipList[String]()) foreach { l =>
+        l.push("a")
+        l.push("b")
+        l.push("c")
+        l.push("d")
+        l.push("e")
+
+        l.pop() shouldBe Some("e")
+        l.flip()
+        l.pop() shouldBe Some("a")
+        l.flip()
+        l.pop() shouldBe Some("d")
+        l.flip()
+        l.pop() shouldBe Some("b")
+        l.flip()
+        l.pop() shouldBe Some("c")
+        l.pop() shouldBe None
+      }
+    }
+  }
+
+  "used as a queue" should {
+    "honor isFlipped state when enqueue() is called" in {
+      Some(FlipList[String]()) foreach { l =>
+        l.enqueue("a")
+        l.flip()
+        l.enqueue("b")
+        l.flip()
+        l.enqueue("c")
+        l.flip()
+        l.enqueue("d")
+        l.flip()
+        l.enqueue("e")
+
+        l.dequeue() shouldBe Some("d")
+        l.dequeue() shouldBe Some("b")
+        l.dequeue() shouldBe Some("a")
+        l.dequeue() shouldBe Some("c")
+        l.dequeue() shouldBe Some("e")
+        l.dequeue() shouldBe None
+      }
+    }
+
+    "honor isFlipped state when dequeue() is called" in {
+      Some(FlipList[String]()) foreach { l =>
+        l.enqueue("a")
+        l.enqueue("b")
+        l.enqueue("c")
+        l.enqueue("d")
+        l.enqueue("e")
+
+        l.dequeue() shouldBe Some("a")
+        l.flip()
+        l.dequeue() shouldBe Some("e")
+        l.flip()
+        l.dequeue() shouldBe Some("b")
+        l.flip()
+        l.dequeue() shouldBe Some("d")
+        l.flip()
+        l.dequeue() shouldBe Some("c")
+        l.dequeue() shouldBe None
+      }
+    }
+  }
 }
