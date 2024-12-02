@@ -228,9 +228,6 @@ class FlipList[T] {
     }
   }
 
-  def push(value: T): FlipListNode[T] = pushLeft(value)
-  def enqueue(value: T): FlipListNode[T] = pushRight(value)
-
   /**
    * Remove and return the left-most value if the list was non-empty.
    *
@@ -265,7 +262,12 @@ class FlipList[T] {
     case _ => None
   }
 
+  // stack methods
+  def push(value: T): FlipListNode[T] = pushLeft(value)
   def pop(): Option[T] = popLeft()
+
+  // queue methods
+  def enqueue(value: T): FlipListNode[T] = pushRight(value)
   def dequeue(): Option[T] = popLeft()
 
   /**
