@@ -8,7 +8,7 @@ import scala.util.{Failure, Success, Try}
 
 /**
  * @param pin the pin on which to listen for button presses
- * @param normallyClosed indicates whether
+ * @param normallyClosed true if the default button state is closed; false if the default state is open
  */
 class Button(
   val pi4jContext: Context,

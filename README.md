@@ -49,6 +49,7 @@ The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](htt
 
 ## Pin Connections
 
+```
 | Display               |
 |=======================|
 | GND--------------     |
@@ -64,7 +65,7 @@ The control logic is ported from the C++ Arduino library [LiquidCrystal_I2C](htt
 | SCL  ---- o o---- GND |
 |=======================|
 | Raspberry Pi          |
-
+```
 
 ## Identifying I2C Device Address
 
